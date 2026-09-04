@@ -1098,6 +1098,4 @@ st.markdown("""
     Immo Maroc © 2026 — Veille intelligente du marché immobilier marocain<br>
     ✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦
 </div>
-""", unsafe_allow_html=True)git add .
-git commit -m "Full PostgreSQL support in dashboard"
-git push origin master
+""", unsafe_allow_html=True)
