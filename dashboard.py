@@ -5,7 +5,18 @@ import plotly.express as px
 import folium
 import uuid
 import random
+import os
 from streamlit_folium import st_folium
+
+# ── Charger les secrets (Streamlit Cloud ou local)
+try:
+    for key in ["GROQ_API_KEY", "STRIPE_PUBLIC_KEY", "STRIPE_SECRET_KEY"]:
+        if key not in os.environ:
+            os.environ[key] = st.secrets.get(key, "")
+except:
+    from dotenv import load_dotenv
+    load_dotenv()
+
 from auth import (init_auth_db, inscrire_utilisateur, connecter_utilisateur,
                   get_credits, utiliser_credit, ajouter_credits,
                   get_session_anonyme, utiliser_recherche_anonyme, enregistrer_recherche)

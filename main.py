@@ -5,18 +5,28 @@ import sys
 import os
 from datetime import datetime
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from groq import Groq
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
 from database import init_db, sauvegarder_annonces, stats_db
 from scrapers.mubawab import scraper_mubawab
 from scrapers.yakeey import scraper_yakeey
 
-load_dotenv()
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# ── Clé Groq compatible local + Streamlit Cloud
+try:
+    import streamlit as st
+    groq_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
+except:
+    groq_key = os.getenv("GROQ_API_KEY", "")
+
+if not groq_key:
+    from dotenv import load_dotenv
+    load_dotenv()
+    groq_key = os.getenv("GROQ_API_KEY", "")
+
+client = Groq(api_key=groq_key)
 
 
 def nettoyer_avec_ia(titre, description, prix_raw, surface_raw):
@@ -166,7 +176,6 @@ async def main():
 
     init_db()
 
-    # ── Avito
     try:
         annonces_avito = await scraper_avito()
         nb_avito = sauvegarder_annonces(annonces_avito, source="avito")
@@ -175,7 +184,6 @@ async def main():
         print(f"❌ Erreur Avito : {e}")
         annonces_avito = []
 
-    # ── Mubawab
     try:
         annonces_mubawab = await scraper_mubawab()
         nb_mubawab = sauvegarder_annonces(annonces_mubawab, source="mubawab")
@@ -184,7 +192,6 @@ async def main():
         print(f"❌ Erreur Mubawab : {e}")
         annonces_mubawab = []
 
-    # ── Yakeey
     try:
         annonces_yakeey = await scraper_yakeey(nb_pages=5)
         nb_yakeey = sauvegarder_annonces(annonces_yakeey, source="yakeey")
@@ -193,7 +200,6 @@ async def main():
         print(f"❌ Erreur Yakeey : {e}")
         annonces_yakeey = []
 
-    # ── Résumé
     fin = datetime.now()
     duree = (fin - debut).seconds
     total = len(annonces_avito) + len(annonces_mubawab) + len(annonces_yakeey)
@@ -209,4 +215,5 @@ async def main():
     stats_db()
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

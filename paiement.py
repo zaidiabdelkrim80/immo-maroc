@@ -1,18 +1,18 @@
 import stripe
 import os
 import sqlite3
-from dotenv import load_dotenv
 from datetime import datetime
 
-load_dotenv()
-
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+try:
+    import streamlit as st
+    stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", os.getenv("STRIPE_SECRET_KEY", ""))
+except:
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 
 DB_PATH = "immo.db"
 
 
 def init_users_db():
-    """Crée la table utilisateurs si elle n'existe pas"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
@@ -42,37 +42,39 @@ def init_users_db():
 
     conn.commit()
     conn.close()
-    print("✅ Tables utilisateurs et transactions créées")
 
 
 def creer_session_paiement(email, pack):
-    """Crée une session de paiement Stripe"""
-
     packs = {
         "starter": {
             "nom": "Pack Starter — 100 crédits",
-            "prix": 999,  # en centimes = 9.99€
+            "prix": 999,
             "credits": 100,
         },
         "pro": {
             "nom": "Pack Pro — 500 crédits",
-            "prix": 3999,  # 39.99€
+            "prix": 3999,
             "credits": 500,
         },
         "business": {
             "nom": "Pack Business — 2000 crédits",
-            "prix": 9999,  # 99.99€
+            "prix": 9999,
             "credits": 2000,
         }
     }
 
     if pack not in packs:
-        print(f"❌ Pack inconnu : {pack}")
         return None
 
     p = packs[pack]
 
     try:
+        # URL de base
+        try:
+            base_url = st.secrets.get("APP_URL", "http://localhost:8501")
+        except:
+            base_url = os.getenv("APP_URL", "http://localhost:8501")
+
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[{
@@ -88,17 +90,14 @@ def creer_session_paiement(email, pack):
             }],
             mode="payment",
             customer_email=email,
-            success_url="http://localhost:8501?paiement=succes&email=" + email + "&pack=" + pack,
-            cancel_url="http://localhost:8501?paiement=annule",
+            success_url=base_url + "?paiement=succes&email=" + email + "&pack=" + pack,
+            cancel_url=base_url + "?paiement=annule",
             metadata={
                 "email": email,
                 "pack": pack,
                 "credits": p["credits"]
             }
         )
-
-        print(f"✅ Session créée pour {email} — Pack {pack}")
-        print(f"   🔗 URL de paiement : {session.url}")
         return session
 
     except Exception as e:
@@ -107,18 +106,15 @@ def creer_session_paiement(email, pack):
 
 
 def ajouter_credits(email, credits, stripe_payment_id, montant_eur):
-    """Ajoute des crédits à un utilisateur après paiement"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Créer l'utilisateur s'il n'existe pas
     cursor.execute("""
         INSERT OR IGNORE INTO utilisateurs (email, credits, date_inscription)
         VALUES (?, 0, ?)
     """, (email, now))
 
-    # Ajouter les crédits
     cursor.execute("""
         UPDATE utilisateurs
         SET credits = credits + ?,
@@ -126,7 +122,6 @@ def ajouter_credits(email, credits, stripe_payment_id, montant_eur):
         WHERE email = ?
     """, (credits, now, email))
 
-    # Enregistrer la transaction
     cursor.execute("""
         INSERT INTO transactions (email, montant_eur, credits_ajoutes, stripe_payment_id, date_transaction, statut)
         VALUES (?, ?, ?, ?, ?, 'success')
@@ -134,11 +129,9 @@ def ajouter_credits(email, credits, stripe_payment_id, montant_eur):
 
     conn.commit()
     conn.close()
-    print(f"✅ {credits} crédits ajoutés pour {email}")
 
 
 def get_credits(email):
-    """Retourne le nombre de crédits d'un utilisateur"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT credits FROM utilisateurs WHERE email = ?", (email,))
@@ -148,29 +141,12 @@ def get_credits(email):
 
 
 def utiliser_credit(email):
-    """Utilise 1 crédit — retourne True si OK, False si pas assez de crédits"""
     credits = get_credits(email)
     if credits <= 0:
         return False
-
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE utilisateurs SET credits = credits - 1 WHERE email = ?
-    """, (email,))
+    cursor.execute("UPDATE utilisateurs SET credits = credits - 1 WHERE email = ?", (email,))
     conn.commit()
     conn.close()
     return True
-
-
-if __name__ == "__main__":
-    # Test
-    init_users_db()
-
-    print("\n🧪 Test création session Stripe...")
-    session = creer_session_paiement("test@immomaroc.ma", "starter")
-
-    if session:
-        print(f"\n✅ Tout fonctionne !")
-        print(f"   Ouvre cette URL pour tester le paiement :")
-        print(f"   {session.url}")
