@@ -1,0 +1,14 @@
+venv/
+.env
+__pycache__/
+*.pyc
+immo.db
+*.html
+*.log
+.idea/
+scraping.log
+mubawab_debug.html
+yakeey_debug.html
+avito_page.html
+annonces.json
+annonces_propres.json
