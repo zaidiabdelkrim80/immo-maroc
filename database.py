@@ -1,111 +1,70 @@
-import sqlite3
 import os
 from datetime import datetime
-
+from db_config import get_db_connection, get_placeholder
 
 DB_PATH = "immo.db"
 
 
 def init_db():
-    """Crée la base de données et la table annonces si elles n'existent pas"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS annonces (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            source TEXT NOT NULL,
-            titre TEXT,
-            prix_dh INTEGER,
-            surface_m2 INTEGER,
-            chambres INTEGER,
-            ville TEXT,
-            type_bien TEXT,
-            prix_m2 INTEGER,
-            url TEXT UNIQUE,
-            date_scraping TEXT,
-            actif INTEGER DEFAULT 1
-        )
-    """)
-
-    # Table historique des prix
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS historique_prix (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT,
-            prix_dh INTEGER,
-            date_observation TEXT
-        )
-    """)
-
-    conn.commit()
-    conn.close()
+    from db_config import init_tables
+    init_tables()
     print("✅ Base de données initialisée")
 
 
 def sauvegarder_annonce(annonce, source="avito"):
-    """Sauvegarde une annonce — ignore si l'URL existe déjà, met à jour le prix si changé"""
-    conn = sqlite3.connect(DB_PATH)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-
+    ph = get_placeholder(db_type)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     url = annonce.get("url", "")
 
-    # Vérifier si l'annonce existe déjà
-    cursor.execute("SELECT id, prix_dh FROM annonces WHERE url = ?", (url,))
-    existante = cursor.fetchone()
+    try:
+        cursor.execute(f"SELECT id, prix_dh FROM annonces WHERE url = {ph}", (url,))
+        existante = cursor.fetchone()
 
-    if existante:
-        ancien_prix = existante[1]
-        nouveau_prix = annonce.get("prix_dh")
+        if existante:
+            ancien_prix = existante[1]
+            nouveau_prix = annonce.get("prix_dh")
+            if nouveau_prix and ancien_prix != nouveau_prix:
+                cursor.execute(f"""
+                    INSERT INTO historique_prix (url, prix_dh, date_observation)
+                    VALUES ({ph}, {ph}, {ph})
+                """, (url, nouveau_prix, now))
+                cursor.execute(f"""
+                    UPDATE annonces SET prix_dh = {ph}, prix_m2 = {ph}, date_scraping = {ph}
+                    WHERE url = {ph}
+                """, (nouveau_prix, annonce.get("prix_m2"), now, url))
+        else:
+            cursor.execute(f"""
+                INSERT INTO annonces (source, titre, prix_dh, surface_m2, chambres, ville, type_bien, prix_m2, url, date_scraping)
+                VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                ON CONFLICT (url) DO NOTHING
+            """, (
+                source, annonce.get("titre"), annonce.get("prix_dh"),
+                annonce.get("surface_m2"), annonce.get("chambres"),
+                annonce.get("ville"), annonce.get("type_bien"),
+                annonce.get("prix_m2"), url, now
+            ))
 
-        # Si le prix a changé, on le note dans l'historique
-        if nouveau_prix and ancien_prix != nouveau_prix:
-            cursor.execute("""
-                INSERT INTO historique_prix (url, prix_dh, date_observation)
-                VALUES (?, ?, ?)
-            """, (url, nouveau_prix, now))
-            cursor.execute("""
-                UPDATE annonces SET prix_dh = ?, prix_m2 = ?, date_scraping = ?
-                WHERE url = ?
-            """, (nouveau_prix, annonce.get("prix_m2"), now, url))
-            print(f"  📈 Prix mis à jour : {ancien_prix:,} → {nouveau_prix:,} DH")
-
-    else:
-        # Nouvelle annonce
-        cursor.execute("""
-            INSERT INTO annonces (source, titre, prix_dh, surface_m2, chambres, ville, type_bien, prix_m2, url, date_scraping)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            source,
-            annonce.get("titre"),
-            annonce.get("prix_dh"),
-            annonce.get("surface_m2"),
-            annonce.get("chambres"),
-            annonce.get("ville"),
-            annonce.get("type_bien"),
-            annonce.get("prix_m2"),
-            url,
-            now
-        ))
-
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except Exception as e:
+        print(f"⚠️ Erreur sauvegarde : {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 
 def sauvegarder_annonces(annonces, source="avito"):
-    """Sauvegarde une liste d'annonces"""
-    nouvelles = 0
+    nb = 0
     for a in annonces:
         if a.get("url"):
             sauvegarder_annonce(a, source)
-            nouvelles += 1
-    return nouvelles
+            nb += 1
+    return nb
 
 
 def stats_db():
-    """Affiche les statistiques de la base de données"""
-    conn = sqlite3.connect(DB_PATH)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("SELECT COUNT(*) FROM annonces")
@@ -137,8 +96,3 @@ def stats_db():
     for source, nb in par_source:
         print(f"      {source} : {nb} annonces")
     print("=" * 55)
-
-
-if __name__ == "__main__":
-    init_db()
-    stats_db()
