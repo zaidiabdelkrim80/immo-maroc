@@ -5,19 +5,33 @@ load_dotenv()
 # Détecter si on est sur Streamlit Cloud ou en local
 def get_db_connection():
     """Retourne une connexion à la bonne BDD selon l'environnement"""
+    db_url = ""
+
+    # Essai 1 : Streamlit secrets
     try:
         import streamlit as st
-        db_url = st.secrets.get("DATABASE_URL", os.getenv("DATABASE_URL", ""))
+        db_url = st.secrets.get("DATABASE_URL", "")
     except:
-        db_url = os.getenv("DATABASE_URL", "")
+        pass
 
-    if db_url and db_url.startswith("postgresql"):
-        # PostgreSQL (Supabase — production)
+    # Essai 2 : variable d'environnement
+    if not db_url:
+        db_url = os.environ.get("DATABASE_URL", "")
+
+    # Essai 3 : .env local
+    if not db_url:
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+            db_url = os.environ.get("DATABASE_URL", "")
+        except:
+            pass
+
+    if db_url and "postgresql" in db_url:
         import psycopg2
         conn = psycopg2.connect(db_url)
         return conn, "postgresql"
     else:
-        # SQLite (local)
         conn = sqlite3.connect("immo.db")
         return conn, "sqlite"
 
