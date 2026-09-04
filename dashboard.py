@@ -14,8 +14,11 @@ try:
         if key not in os.environ:
             os.environ[key] = st.secrets.get(key, "")
 except:
-    from dotenv import load_dotenv
-    load_dotenv()
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except:
+        pass
 
 from auth import (init_auth_db, inscrire_utilisateur, connecter_utilisateur,
                   get_credits, utiliser_credit, ajouter_credits,
@@ -46,6 +49,7 @@ VILLES_COORDS = {
     'Guéliz': [31.6340, -8.0089],
     'Ain Sebaa': [33.6070, -7.5150],
     'Bouskoura': [33.4500, -7.6500],
+    'Dar Bouazza': [33.4833, -7.7667],
 }
 
 PUBS = [
@@ -383,7 +387,6 @@ div[aria-selected="true"] {
     padding: 20px;
     text-align: center;
     margin-bottom: 20px;
-    animation: fadeInScale 0.3s ease;
 }
 p, span, label, h1, h2, h3 {
     color: #FAF7F2 !important;
@@ -393,64 +396,97 @@ p, span, label, h1, h2, h3 {
 
 
 def get_annonces(ville=None, prix_min=None, prix_max=None, surface_min=None, surface_max=None, source=None):
-    conn = sqlite3.connect(DB_PATH)
-    query = "SELECT * FROM annonces WHERE 1=1"
-    params = []
-    if ville and ville != "Toutes":
-        query += " AND ville = ?"
-        params.append(ville)
-    if prix_min:
-        query += " AND prix_dh >= ?"
-        params.append(prix_min)
-    if prix_max:
-        query += " AND prix_dh <= ?"
-        params.append(prix_max)
-    if surface_min:
-        query += " AND surface_m2 >= ?"
-        params.append(surface_min)
-    if surface_max:
-        query += " AND surface_m2 <= ?"
-        params.append(surface_max)
-    if source and source != "Toutes":
-        query += " AND source = ?"
-        params.append(source)
-    query += " ORDER BY prix_dh ASC"
-    df = pd.read_sql_query(query, conn, params=params)
-    conn.close()
-    return df
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        query = "SELECT * FROM annonces WHERE 1=1"
+        params = []
+        if ville and ville != "Toutes":
+            query += " AND ville = ?"
+            params.append(ville)
+        if prix_min:
+            query += " AND prix_dh >= ?"
+            params.append(prix_min)
+        if prix_max:
+            query += " AND prix_dh <= ?"
+            params.append(prix_max)
+        if surface_min:
+            query += " AND surface_m2 >= ?"
+            params.append(surface_min)
+        if surface_max:
+            query += " AND surface_m2 <= ?"
+            params.append(surface_max)
+        if source and source != "Toutes":
+            query += " AND source = ?"
+            params.append(source)
+        query += " ORDER BY prix_dh ASC"
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+        return df
+    except:
+        return pd.DataFrame()
 
 
 def get_villes():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT ville FROM annonces WHERE ville IS NOT NULL ORDER BY ville")
-    villes = ["Toutes"] + [row[0] for row in cursor.fetchall()]
-    conn.close()
-    return villes
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT ville FROM annonces WHERE ville IS NOT NULL ORDER BY ville")
+        villes = ["Toutes"] + [row[0] for row in cursor.fetchall()]
+        conn.close()
+        return villes
+    except:
+        return ["Toutes"]
 
 
 def get_sources():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT source FROM annonces ORDER BY source")
-    sources = ["Toutes"] + [row[0] for row in cursor.fetchall()]
-    conn.close()
-    return sources
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT source FROM annonces ORDER BY source")
+        sources = ["Toutes"] + [row[0] for row in cursor.fetchall()]
+        conn.close()
+        return sources
+    except:
+        return ["Toutes"]
 
 
 def get_stats():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM annonces")
-    total = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM annonces WHERE prix_dh IS NOT NULL")
-    avec_prix = cursor.fetchone()[0]
-    cursor.execute("SELECT AVG(prix_dh) FROM annonces WHERE prix_dh IS NOT NULL")
-    prix_moyen = cursor.fetchone()[0]
-    cursor.execute("SELECT AVG(prix_m2) FROM annonces WHERE prix_m2 IS NOT NULL")
-    prix_m2_moyen = cursor.fetchone()[0]
-    conn.close()
-    return total, avec_prix, prix_moyen, prix_m2_moyen
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM annonces")
+        total = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM annonces WHERE prix_dh IS NOT NULL")
+        avec_prix = cursor.fetchone()[0]
+        cursor.execute("SELECT AVG(prix_dh) FROM annonces WHERE prix_dh IS NOT NULL")
+        prix_moyen = cursor.fetchone()[0]
+        cursor.execute("SELECT AVG(prix_m2) FROM annonces WHERE prix_m2 IS NOT NULL")
+        prix_m2_moyen = cursor.fetchone()[0]
+        conn.close()
+        return total, avec_prix, prix_moyen, prix_m2_moyen
+    except:
+        return 0, 0, None, None
+
+
+def get_alertes(budget_max, surface_min, ville=None):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        query = """
+            SELECT titre, prix_dh, surface_m2, prix_m2, ville, url, source
+            FROM annonces
+            WHERE prix_dh <= ? AND prix_dh IS NOT NULL
+            AND surface_m2 >= ? AND surface_m2 IS NOT NULL
+        """
+        params = [budget_max, surface_min]
+        if ville and ville != "Toutes":
+            query += " AND ville = ?"
+            params.append(ville)
+        query += " ORDER BY prix_dh ASC LIMIT 10"
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+        return df
+    except:
+        return pd.DataFrame()
 
 
 def afficher_pub_sidebar():
@@ -494,7 +530,7 @@ def afficher_sidebar_auth():
         if "session_id" not in st.session_state:
             st.session_state["session_id"] = str(uuid.uuid4())
         session = get_session_anonyme(st.session_state["session_id"])
-        restantes = session[1]
+        restantes = session[1] if session else 5
         st.sidebar.markdown(f"""
         <div style="text-align:center; margin-bottom:10px; padding:10px;
              background:rgba(212,175,55,0.08); border-radius:8px;
@@ -561,7 +597,6 @@ credits_map = {"starter": 100, "pro": 500, "business": 2000}
 if paiement_status == "succes" and email_paye and pack_paye:
     credits_a_ajouter = credits_map.get(pack_paye, 0)
     cle_traitement = f"paiement_traite_{pack_paye}_{email_paye}"
-
     if credits_a_ajouter > 0 and not st.session_state.get(cle_traitement):
         ajouter_credits(email_paye, credits_a_ajouter)
         st.session_state[cle_traitement] = True
@@ -570,16 +605,14 @@ if paiement_status == "succes" and email_paye and pack_paye:
             "pack": pack_paye,
             "credits": credits_a_ajouter
         }
-
-    # Nettoyer l'URL
     st.query_params.clear()
 
-# ── Statut payant (calculé APRÈS ajout crédits)
+# ── Statut payant
 est_payant = False
 if st.session_state.get("user_email"):
     est_payant = get_credits(st.session_state["user_email"]) > 50
 
-# ── Modal pub au lancement
+# ── Modal pub
 if "modal_shown" not in st.session_state:
     st.session_state["modal_shown"] = False
 
@@ -637,7 +670,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Notification paiement réussi
+# ── Notification paiement
 if st.session_state.get("paiement_succes"):
     info = st.session_state["paiement_succes"]
     st.markdown(f"""
@@ -648,7 +681,7 @@ if st.session_state.get("paiement_succes"):
         </div>
         <div style="color:#FAF7F2; font-size:0.95rem;">
             Pack <b style="color:#D4AF37;">{info['pack'].capitalize()}</b> activé —
-            <b style="color:#D4AF37;">+{info['credits']} crédits</b> ajoutés à votre compte
+            <b style="color:#D4AF37;">+{info['credits']} crédits</b> ajoutés
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -669,7 +702,6 @@ surface_min = st.sidebar.number_input("Minimum ", min_value=0, value=0, step=10)
 surface_max = st.sidebar.number_input("Maximum ", min_value=0, value=1000, step=10)
 st.sidebar.markdown("---")
 
-# ── Pub sidebar (non payants seulement)
 if not est_payant:
     afficher_pub_sidebar()
 
@@ -709,48 +741,51 @@ with tab1:
 
     st.markdown('<div class="separateur">✦ ◆ ✦ ◆ ✦</div>', unsafe_allow_html=True)
 
-    col_g1, col_g2 = st.columns(2)
-    with col_g1:
-        st.markdown('<div class="section-title">📍 Annonces par ville</div>', unsafe_allow_html=True)
-        df_villes = df[df['ville'].notna()]
-        if not df_villes.empty:
-            fig = px.bar(
-                df_villes.groupby('ville').size().reset_index(name='count').sort_values('count', ascending=False),
-                x='ville', y='count', color='count',
-                color_continuous_scale=[[0, '#2d6a4f'], [0.5, '#D4AF37'], [1, '#C1440E']],
-                labels={'ville': 'Ville', 'count': 'Annonces'}
-            )
+    if df.empty:
+        st.info("📭 Aucune annonce en base de données. Le scraping n'a pas encore été lancé sur ce serveur.")
+    else:
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.markdown('<div class="section-title">📍 Annonces par ville</div>', unsafe_allow_html=True)
+            df_villes = df[df['ville'].notna()]
+            if not df_villes.empty:
+                fig = px.bar(
+                    df_villes.groupby('ville').size().reset_index(name='count').sort_values('count', ascending=False),
+                    x='ville', y='count', color='count',
+                    color_continuous_scale=[[0, '#2d6a4f'], [0.5, '#D4AF37'], [1, '#C1440E']],
+                    labels={'ville': 'Ville', 'count': 'Annonces'}
+                )
+                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#FAF7F2', family='Inter'), coloraxis_showscale=False)
+                fig.update_xaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
+                fig.update_yaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
+                st.plotly_chart(fig, use_container_width=True)
+
+        with col_g2:
+            st.markdown('<div class="section-title">💰 Distribution des prix</div>', unsafe_allow_html=True)
+            df_prix = df[df['prix_dh'].notna()]
+            if not df_prix.empty:
+                fig = px.histogram(df_prix, x='prix_dh', nbins=20,
+                    color_discrete_sequence=['#D4AF37'], labels={'prix_dh': 'Prix (DH)'})
+                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#FAF7F2', family='Inter'))
+                fig.update_xaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
+                fig.update_yaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
+                st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown('<div class="section-title">📊 Prix vs Surface</div>', unsafe_allow_html=True)
+        df_scatter = df[df['prix_dh'].notna() & df['surface_m2'].notna()]
+        if not df_scatter.empty:
+            fig = px.scatter(df_scatter, x='surface_m2', y='prix_dh', color='ville',
+                hover_data=['titre', 'type_bien'],
+                color_discrete_sequence=['#D4AF37', '#C1440E', '#52B788', '#90CDF4', '#FC814A', '#B794F4'],
+                labels={'surface_m2': 'Surface (m²)', 'prix_dh': 'Prix (DH)'})
             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#FAF7F2', family='Inter'), coloraxis_showscale=False)
+                font=dict(color='#FAF7F2', family='Inter'),
+                legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#FAF7F2')))
             fig.update_xaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
             fig.update_yaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
             st.plotly_chart(fig, use_container_width=True)
-
-    with col_g2:
-        st.markdown('<div class="section-title">💰 Distribution des prix</div>', unsafe_allow_html=True)
-        df_prix = df[df['prix_dh'].notna()]
-        if not df_prix.empty:
-            fig = px.histogram(df_prix, x='prix_dh', nbins=20,
-                color_discrete_sequence=['#D4AF37'], labels={'prix_dh': 'Prix (DH)'})
-            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#FAF7F2', family='Inter'))
-            fig.update_xaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
-            fig.update_yaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
-            st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown('<div class="section-title">📊 Prix vs Surface</div>', unsafe_allow_html=True)
-    df_scatter = df[df['prix_dh'].notna() & df['surface_m2'].notna()]
-    if not df_scatter.empty:
-        fig = px.scatter(df_scatter, x='surface_m2', y='prix_dh', color='ville',
-            hover_data=['titre', 'type_bien'],
-            color_discrete_sequence=['#D4AF37', '#C1440E', '#52B788', '#90CDF4', '#FC814A', '#B794F4'],
-            labels={'surface_m2': 'Surface (m²)', 'prix_dh': 'Prix (DH)'})
-        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#FAF7F2', family='Inter'),
-            legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#FAF7F2')))
-        fig.update_xaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
-        fig.update_yaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
-        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown('<div class="separateur">✦ ◆ ✦ ◆ ✦</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="section-title">📋 Annonces ({len(df)} résultats)</div>', unsafe_allow_html=True)
@@ -790,7 +825,7 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.warning("Aucune annonce trouvée avec ces filtres.")
+        st.info("📭 Aucune annonce disponible pour le moment.")
 
 # ════════════════════════════════
 # TAB 2
@@ -798,39 +833,40 @@ with tab1:
 with tab2:
     st.markdown('<div class="section-title">🗺️ Carte des annonces par ville</div>', unsafe_allow_html=True)
     carte = folium.Map(location=[31.7917, -7.0926], zoom_start=6, tiles='CartoDB dark_matter')
-    df_carte = df[df['ville'].notna() & df['prix_dh'].notna()]
-    if not df_carte.empty:
-        stats_villes = df_carte.groupby('ville').agg(
-            nb_annonces=('prix_dh', 'count'),
-            prix_moyen=('prix_dh', 'mean'),
-            prix_m2_moyen=('prix_m2', 'mean')
-        ).reset_index()
-        for _, row in stats_villes.iterrows():
-            ville = row['ville']
-            if ville in VILLES_COORDS:
-                coords = VILLES_COORDS[ville]
-                nb = int(row['nb_annonces'])
-                prix_moy = int(row['prix_moyen'])
-                prix_m2 = int(row['prix_m2_moyen']) if pd.notna(row['prix_m2_moyen']) else 0
-                rayon = max(12, nb * 10)
-                popup_html = f"""
-                <div style="font-family:Georgia; min-width:200px; padding:10px;
-                     background:#1B4332; color:#FAF7F2; border-radius:8px; border:1px solid #D4AF37;">
-                    <h4 style="color:#D4AF37; margin:0 0 8px 0;
-                        border-bottom:1px solid rgba(212,175,55,0.4); padding-bottom:6px;">
-                        🕌 {ville}</h4>
-                    <b>📦 Annonces :</b> {nb}<br>
-                    <b>💰 Prix moyen :</b> {prix_moy:,} DH<br>
-                    <b>📐 Prix/m² :</b> {prix_m2:,} DH/m²
-                </div>
-                """
-                folium.CircleMarker(
-                    location=coords, radius=rayon,
-                    color='#D4AF37', fill=True,
-                    fill_color='#52B788', fill_opacity=0.7,
-                    popup=folium.Popup(popup_html, max_width=250),
-                    tooltip=f"🕌 {ville} — {nb} annonces — {prix_moy:,} DH"
-                ).add_to(carte)
+    if not df.empty:
+        df_carte = df[df['ville'].notna() & df['prix_dh'].notna()]
+        if not df_carte.empty:
+            stats_villes = df_carte.groupby('ville').agg(
+                nb_annonces=('prix_dh', 'count'),
+                prix_moyen=('prix_dh', 'mean'),
+                prix_m2_moyen=('prix_m2', 'mean')
+            ).reset_index()
+            for _, row in stats_villes.iterrows():
+                ville = row['ville']
+                if ville in VILLES_COORDS:
+                    coords = VILLES_COORDS[ville]
+                    nb = int(row['nb_annonces'])
+                    prix_moy = int(row['prix_moyen'])
+                    prix_m2 = int(row['prix_m2_moyen']) if pd.notna(row['prix_m2_moyen']) else 0
+                    rayon = max(12, nb * 10)
+                    popup_html = f"""
+                    <div style="font-family:Georgia; min-width:200px; padding:10px;
+                         background:#1B4332; color:#FAF7F2; border-radius:8px; border:1px solid #D4AF37;">
+                        <h4 style="color:#D4AF37; margin:0 0 8px 0;
+                            border-bottom:1px solid rgba(212,175,55,0.4); padding-bottom:6px;">
+                            🕌 {ville}</h4>
+                        <b>📦 Annonces :</b> {nb}<br>
+                        <b>💰 Prix moyen :</b> {prix_moy:,} DH<br>
+                        <b>📐 Prix/m² :</b> {prix_m2:,} DH/m²
+                    </div>
+                    """
+                    folium.CircleMarker(
+                        location=coords, radius=rayon,
+                        color='#D4AF37', fill=True,
+                        fill_color='#52B788', fill_opacity=0.7,
+                        popup=folium.Popup(popup_html, max_width=250),
+                        tooltip=f"🕌 {ville} — {nb} annonces — {prix_moy:,} DH"
+                    ).add_to(carte)
     st_folium(carte, width=None, height=520)
     st.caption("💡 Cliquez sur un cercle pour voir les détails.")
 
@@ -879,21 +915,8 @@ with tab3:
                     budget_max=budget_alerte,
                     surface_min=surface_alerte
                 )
-                conn = sqlite3.connect(DB_PATH)
-                query = """
-                    SELECT titre, prix_dh, surface_m2, prix_m2, ville, url
-                    FROM annonces
-                    WHERE prix_dh <= ? AND prix_dh IS NOT NULL
-                    AND surface_m2 >= ? AND surface_m2 IS NOT NULL
-                """
-                params = [budget_alerte, surface_alerte]
-                if ville_alerte != "Toutes":
-                    query += " AND ville = ?"
-                    params.append(ville_alerte)
-                query += " ORDER BY prix_dh ASC LIMIT 10"
-                df_res = pd.read_sql_query(query, conn, params=params)
-                conn.close()
-                st.session_state["resultats_recherche"] = df_res.to_dict('records')
+                df_res = get_alertes(budget_alerte, surface_alerte, ville_alerte)
+                st.session_state["resultats_recherche"] = df_res.to_dict('records') if not df_res.empty else []
                 st.rerun()
     else:
         st.markdown("""
@@ -977,7 +1000,7 @@ with tab3:
             </div>
             """, unsafe_allow_html=True)
             st.markdown("""
-            <a href="https://wa.me/?text=Découvrez Immo Maroc - Veille immobilière au Maroc https://immomaroc.ma"
+            <a href="https://wa.me/?text=Découvrez Immo Maroc - Veille immobilière au Maroc https://maghreb-immo.streamlit.app"
                target="_blank"
                style="display:block; text-align:center;
                       background:linear-gradient(135deg,#25D366,#128C7E);
@@ -1078,7 +1101,7 @@ with tab4:
                     </a>
                     """, unsafe_allow_html=True)
 
-# ── Bannière fixe bas
+# ── Bannière bas
 if not est_payant:
     pub_b = random.choice(PUBS)
     st.markdown(f"""
