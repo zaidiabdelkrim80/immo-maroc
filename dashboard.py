@@ -547,7 +547,7 @@ def afficher_sidebar_auth():
         """, unsafe_allow_html=True)
 
         with st.sidebar.expander("🔐 Se connecter / S'inscrire"):
-            mode = st.radio("", ["Connexion", "Inscription"], horizontal=True)
+            mode = st.radio("Mode", ["Connexion", "Inscription"], horizontal=True, label_visibility="collapsed")
             if mode == "Connexion":
                 email = st.text_input("📧 Email", key="login_email")
                 password = st.text_input("🔒 Mot de passe", type="password", key="login_password")
