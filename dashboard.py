@@ -10,9 +10,11 @@ from streamlit_folium import st_folium
 
 # ── Charger les secrets (Streamlit Cloud ou local)
 try:
-    for key in ["GROQ_API_KEY", "STRIPE_PUBLIC_KEY", "STRIPE_SECRET_KEY"]:
+    for key in ["GROQ_API_KEY", "STRIPE_PUBLIC_KEY", "STRIPE_SECRET_KEY", "DATABASE_URL"]:
         if key not in os.environ:
-            os.environ[key] = st.secrets.get(key, "")
+            val = st.secrets.get(key, "")
+            if val:
+                os.environ[key] = val
 except:
     try:
         from dotenv import load_dotenv
@@ -20,12 +22,11 @@ except:
     except:
         pass
 
+from db_config import get_db_connection, get_placeholder
 from auth import (init_auth_db, inscrire_utilisateur, connecter_utilisateur,
                   get_credits, utiliser_credit, ajouter_credits,
                   get_session_anonyme, utiliser_recherche_anonyme, enregistrer_recherche)
 from paiement import creer_session_paiement
-
-DB_PATH = "immo.db"
 
 VILLES_COORDS = {
     'Casablanca': [33.5731, -7.5898],
@@ -397,38 +398,40 @@ p, span, label, h1, h2, h3 {
 
 def get_annonces(ville=None, prix_min=None, prix_max=None, surface_min=None, surface_max=None, source=None):
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn, db_type = get_db_connection()
+        ph = get_placeholder(db_type)
         query = "SELECT * FROM annonces WHERE 1=1"
         params = []
         if ville and ville != "Toutes":
-            query += " AND ville = ?"
+            query += f" AND ville = {ph}"
             params.append(ville)
         if prix_min:
-            query += " AND prix_dh >= ?"
+            query += f" AND prix_dh >= {ph}"
             params.append(prix_min)
         if prix_max:
-            query += " AND prix_dh <= ?"
+            query += f" AND prix_dh <= {ph}"
             params.append(prix_max)
         if surface_min:
-            query += " AND surface_m2 >= ?"
+            query += f" AND surface_m2 >= {ph}"
             params.append(surface_min)
         if surface_max:
-            query += " AND surface_m2 <= ?"
+            query += f" AND surface_m2 <= {ph}"
             params.append(surface_max)
         if source and source != "Toutes":
-            query += " AND source = ?"
+            query += f" AND source = {ph}"
             params.append(source)
         query += " ORDER BY prix_dh ASC"
         df = pd.read_sql_query(query, conn, params=params)
         conn.close()
         return df
-    except:
+    except Exception as e:
+        print(f"Erreur get_annonces: {e}")
         return pd.DataFrame()
 
 
 def get_villes():
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn, db_type = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT ville FROM annonces WHERE ville IS NOT NULL ORDER BY ville")
         villes = ["Toutes"] + [row[0] for row in cursor.fetchall()]
@@ -440,7 +443,7 @@ def get_villes():
 
 def get_sources():
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn, db_type = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT source FROM annonces ORDER BY source")
         sources = ["Toutes"] + [row[0] for row in cursor.fetchall()]
@@ -452,7 +455,7 @@ def get_sources():
 
 def get_stats():
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn, db_type = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM annonces")
         total = cursor.fetchone()[0]
@@ -470,16 +473,17 @@ def get_stats():
 
 def get_alertes(budget_max, surface_min, ville=None):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        query = """
+        conn, db_type = get_db_connection()
+        ph = get_placeholder(db_type)
+        query = f"""
             SELECT titre, prix_dh, surface_m2, prix_m2, ville, url, source
             FROM annonces
-            WHERE prix_dh <= ? AND prix_dh IS NOT NULL
-            AND surface_m2 >= ? AND surface_m2 IS NOT NULL
+            WHERE prix_dh <= {ph} AND prix_dh IS NOT NULL
+            AND surface_m2 >= {ph} AND surface_m2 IS NOT NULL
         """
         params = [budget_max, surface_min]
         if ville and ville != "Toutes":
-            query += " AND ville = ?"
+            query += f" AND ville = {ph}"
             params.append(ville)
         query += " ORDER BY prix_dh ASC LIMIT 10"
         df = pd.read_sql_query(query, conn, params=params)
@@ -578,7 +582,6 @@ def afficher_sidebar_auth():
 # ════════════════════════════════
 init_auth_db()
 
-# ── Config page
 st.set_page_config(
     page_title="Immo Maroc — Veille Immobilière",
     page_icon="https://flagcdn.com/w20/ma.png",
@@ -586,28 +589,23 @@ st.set_page_config(
 )
 st.markdown(CSS, unsafe_allow_html=True)
 
-# ── Détecter retour paiement Stripe
+# ── Retour paiement Stripe
 query_params = st.query_params
 paiement_status = query_params.get("paiement", "")
 email_paye = query_params.get("email", "")
 pack_paye = query_params.get("pack", "")
-
 credits_map = {"starter": 100, "pro": 500, "business": 2000}
 
 if paiement_status == "succes" and email_paye and pack_paye:
     credits_a_ajouter = credits_map.get(pack_paye, 0)
-    cle_traitement = f"paiement_traite_{pack_paye}_{email_paye}"
-    if credits_a_ajouter > 0 and not st.session_state.get(cle_traitement):
+    cle = f"paiement_traite_{pack_paye}_{email_paye}"
+    if credits_a_ajouter > 0 and not st.session_state.get(cle):
         ajouter_credits(email_paye, credits_a_ajouter)
-        st.session_state[cle_traitement] = True
+        st.session_state[cle] = True
         st.session_state["user_email"] = email_paye
-        st.session_state["paiement_succes"] = {
-            "pack": pack_paye,
-            "credits": credits_a_ajouter
-        }
+        st.session_state["paiement_succes"] = {"pack": pack_paye, "credits": credits_a_ajouter}
     st.query_params.clear()
 
-# ── Statut payant
 est_payant = False
 if st.session_state.get("user_email"):
     est_payant = get_credits(st.session_state["user_email"]) > 50
@@ -627,13 +625,9 @@ if not st.session_state["modal_shown"] and not est_payant:
             </div>
             <div style="font-size:2.5rem; margin-bottom:8px;">🏠</div>
             <div style="font-family:'Playfair Display',serif; font-size:1.4rem;
-                 color:#D4AF37; margin-bottom:12px; font-weight:700;">
-                {pub['titre']}
-            </div>
+                 color:#D4AF37; margin-bottom:12px; font-weight:700;">{pub['titre']}</div>
             <div style="color:rgba(250,247,242,0.8); font-size:0.9rem;
-                 margin-bottom:24px; line-height:1.6;">
-                {pub['desc']}
-            </div>
+                 margin-bottom:24px; line-height:1.6;">{pub['desc']}</div>
             <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
                 <a href="{pub['url']}" target="_blank"
                    style="background:linear-gradient(135deg,#D4AF37,#C1440E);
@@ -677,8 +671,7 @@ if st.session_state.get("paiement_succes"):
     <div class="succes-paiement">
         <div style="font-size:2rem;">🎉</div>
         <div style="font-family:'Playfair Display',serif; font-size:1.3rem; color:#52B788; margin:8px 0;">
-            Paiement confirmé !
-        </div>
+            Paiement confirmé !</div>
         <div style="color:#FAF7F2; font-size:0.95rem;">
             Pack <b style="color:#D4AF37;">{info['pack'].capitalize()}</b> activé —
             <b style="color:#D4AF37;">+{info['credits']} crédits</b> ajoutés
@@ -742,7 +735,7 @@ with tab1:
     st.markdown('<div class="separateur">✦ ◆ ✦ ◆ ✦</div>', unsafe_allow_html=True)
 
     if df.empty:
-        st.info("📭 Aucune annonce en base de données. Le scraping n'a pas encore été lancé sur ce serveur.")
+        st.info("📭 Aucune annonce disponible pour le moment.")
     else:
         col_g1, col_g2 = st.columns(2)
         with col_g1:
@@ -750,7 +743,7 @@ with tab1:
             df_villes = df[df['ville'].notna()]
             if not df_villes.empty:
                 fig = px.bar(
-                    df_villes.groupby('ville').size().reset_index(name='count').sort_values('count', ascending=False),
+                    df_villes.groupby('ville').size().reset_index(name='count').sort_values('count', ascending=False).head(10),
                     x='ville', y='count', color='count',
                     color_continuous_scale=[[0, '#2d6a4f'], [0.5, '#D4AF37'], [1, '#C1440E']],
                     labels={'ville': 'Ville', 'count': 'Annonces'}
@@ -797,11 +790,9 @@ with tab1:
                 <div class="lock-card">
                     <div style="font-size:2rem;">🔒</div>
                     <div style="font-family:'Playfair Display',serif; font-size:1.2rem; color:#D4AF37; margin:8px 0;">
-                        Inscrivez-vous gratuitement
-                    </div>
+                        Inscrivez-vous gratuitement</div>
                     <div style="color:rgba(250,247,242,0.7); font-size:0.9rem;">
-                        Créez un compte gratuit pour voir toutes les annonces
-                    </div>
+                        Créez un compte gratuit pour voir toutes les annonces</div>
                 </div>
                 """, unsafe_allow_html=True)
                 break
@@ -825,7 +816,7 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("📭 Aucune annonce disponible pour le moment.")
+        st.info("📭 Aucune annonce disponible.")
 
 # ════════════════════════════════
 # TAB 2
@@ -848,7 +839,7 @@ with tab2:
                     nb = int(row['nb_annonces'])
                     prix_moy = int(row['prix_moyen'])
                     prix_m2 = int(row['prix_m2_moyen']) if pd.notna(row['prix_m2_moyen']) else 0
-                    rayon = max(12, nb * 10)
+                    rayon = max(12, nb * 5)
                     popup_html = f"""
                     <div style="font-family:Georgia; min-width:200px; padding:10px;
                          background:#1B4332; color:#FAF7F2; border-radius:8px; border:1px solid #D4AF37;">
@@ -923,11 +914,9 @@ with tab3:
         <div class="lock-card">
             <div style="font-size:2rem;">🔒</div>
             <div style="font-family:'Playfair Display',serif; font-size:1.2rem; color:#D4AF37; margin:8px 0;">
-                Plus de recherches disponibles
-            </div>
+                Plus de recherches disponibles</div>
             <div style="color:rgba(250,247,242,0.7); font-size:0.9rem;">
-                Inscrivez-vous gratuitement ou rechargez vos crédits
-            </div>
+                Inscrivez-vous gratuitement ou rechargez vos crédits</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -957,9 +946,7 @@ with tab3:
                                   background:linear-gradient(135deg,#D4AF37,#C1440E);
                                   color:white; padding:8px 12px; border-radius:8px;
                                   font-weight:600; text-decoration:none;
-                                  margin-top:16px; font-size:0.85rem;">
-                            👁️ Voir
-                        </a>
+                                  margin-top:16px; font-size:0.85rem;">👁️ Voir</a>
                         """, unsafe_allow_html=True)
         else:
             st.warning("😔 Aucune annonce ne correspond. Élargissez votre budget.")
@@ -984,8 +971,7 @@ with tab3:
                     <span style="font-size:0.85rem;">{pub['desc']}</span><br>
                     <a href="{pub['url']}" target="_blank"
                        style="color:#D4AF37; font-weight:600; text-decoration:none;">
-                        {pub['cta']} →
-                    </a>
+                        {pub['cta']} →</a>
                 </div>
                 """, unsafe_allow_html=True)
                 ajouter_credits(st.session_state["user_email"], 1)
@@ -996,18 +982,17 @@ with tab3:
             <div class="pub-card">
                 <div style="font-size:1.5rem;">📤</div>
                 <b style="color:#D4AF37;">Partager = +2 crédits</b><br>
-                <span style="font-size:0.8rem; color:rgba(250,247,242,0.6);">Partagez sur WhatsApp ou Facebook</span>
+                <span style="font-size:0.8rem; color:rgba(250,247,242,0.6);">Partagez sur WhatsApp</span>
             </div>
             """, unsafe_allow_html=True)
             st.markdown("""
-            <a href="https://wa.me/?text=Découvrez Immo Maroc - Veille immobilière au Maroc https://maghreb-immo.streamlit.app"
+            <a href="https://wa.me/?text=Découvrez Immo Maroc https://maghreb-immo.streamlit.app"
                target="_blank"
                style="display:block; text-align:center;
                       background:linear-gradient(135deg,#25D366,#128C7E);
                       color:white; padding:8px 12px; border-radius:8px;
                       font-weight:600; text-decoration:none; margin-bottom:8px; font-size:0.85rem;">
-                📤 Partager sur WhatsApp
-            </a>
+                📤 Partager sur WhatsApp</a>
             """, unsafe_allow_html=True)
             if st.button("✅ J'ai partagé (+2 crédits)"):
                 ajouter_credits(st.session_state["user_email"], 2)
@@ -1028,7 +1013,6 @@ with tab4:
         st.markdown(f'<div style="margin-bottom:20px;"><span class="credits-badge">💎 Solde actuel : {credits} crédits</span></div>', unsafe_allow_html=True)
 
         col_p1, col_p2, col_p3 = st.columns(3)
-
         with col_p1:
             st.markdown("""
             <div class="kpi-card" style="border-top:4px solid #52B788;">
@@ -1036,22 +1020,18 @@ with tab4:
                 <div class="kpi-value" style="color:#52B788;">9,99 €</div>
                 <div style="color:#D4AF37; font-weight:600; margin:8px 0;">Pack Starter</div>
                 <div style="color:rgba(250,247,242,0.7); font-size:0.85rem; line-height:2;">
-                    💎 100 crédits<br>🔍 100 recherches<br>✅ Sans pub
-                </div>
+                    💎 100 crédits<br>🔍 100 recherches<br>✅ Sans pub</div>
             </div>
             """, unsafe_allow_html=True)
             if st.button("🌱 Acheter Starter", key="buy_starter"):
                 session_stripe = creer_session_paiement(email, "starter")
                 if session_stripe:
-                    st.markdown(f"""
-                    <a href="{session_stripe.url}" target="_blank"
+                    st.markdown(f"""<a href="{session_stripe.url}" target="_blank"
                        style="display:block; text-align:center;
                               background:linear-gradient(135deg,#D4AF37,#C1440E);
                               color:white; padding:10px; border-radius:8px;
                               font-weight:600; text-decoration:none; margin-top:8px;">
-                        💳 Payer maintenant →
-                    </a>
-                    """, unsafe_allow_html=True)
+                        💳 Payer maintenant →</a>""", unsafe_allow_html=True)
 
         with col_p2:
             st.markdown("""
@@ -1060,22 +1040,18 @@ with tab4:
                 <div class="kpi-value">39,99 €</div>
                 <div style="color:#D4AF37; font-weight:600; margin:8px 0;">Pack Pro</div>
                 <div style="color:rgba(250,247,242,0.7); font-size:0.85rem; line-height:2;">
-                    💎 500 crédits<br>🔍 500 recherches<br>✅ Sans pub<br>🔔 Alertes email
-                </div>
+                    💎 500 crédits<br>🔍 500 recherches<br>✅ Sans pub<br>🔔 Alertes email</div>
             </div>
             """, unsafe_allow_html=True)
             if st.button("⭐ Acheter Pro", key="buy_pro"):
                 session_stripe = creer_session_paiement(email, "pro")
                 if session_stripe:
-                    st.markdown(f"""
-                    <a href="{session_stripe.url}" target="_blank"
+                    st.markdown(f"""<a href="{session_stripe.url}" target="_blank"
                        style="display:block; text-align:center;
                               background:linear-gradient(135deg,#D4AF37,#C1440E);
                               color:white; padding:10px; border-radius:8px;
                               font-weight:600; text-decoration:none; margin-top:8px;">
-                        💳 Payer maintenant →
-                    </a>
-                    """, unsafe_allow_html=True)
+                        💳 Payer maintenant →</a>""", unsafe_allow_html=True)
 
         with col_p3:
             st.markdown("""
@@ -1084,22 +1060,18 @@ with tab4:
                 <div class="kpi-value" style="color:#C1440E;">99,99 €</div>
                 <div style="color:#D4AF37; font-weight:600; margin:8px 0;">Pack Business</div>
                 <div style="color:rgba(250,247,242,0.7); font-size:0.85rem; line-height:2;">
-                    💎 2000 crédits<br>🔍 2000 recherches<br>✅ Sans pub<br>🔔 Alertes email<br>📊 Export Excel
-                </div>
+                    💎 2000 crédits<br>🔍 2000 recherches<br>✅ Sans pub<br>🔔 Alertes email<br>📊 Export Excel</div>
             </div>
             """, unsafe_allow_html=True)
             if st.button("🚀 Acheter Business", key="buy_business"):
                 session_stripe = creer_session_paiement(email, "business")
                 if session_stripe:
-                    st.markdown(f"""
-                    <a href="{session_stripe.url}" target="_blank"
+                    st.markdown(f"""<a href="{session_stripe.url}" target="_blank"
                        style="display:block; text-align:center;
                               background:linear-gradient(135deg,#D4AF37,#C1440E);
                               color:white; padding:10px; border-radius:8px;
                               font-weight:600; text-decoration:none; margin-top:8px;">
-                        💳 Payer maintenant →
-                    </a>
-                    """, unsafe_allow_html=True)
+                        💳 Payer maintenant →</a>""", unsafe_allow_html=True)
 
 # ── Bannière bas
 if not est_payant:
@@ -1109,14 +1081,12 @@ if not est_payant:
         <div style="font-size:0.65rem; color:rgba(212,175,55,0.5);
              text-transform:uppercase; letter-spacing:1px; white-space:nowrap;">Pub</div>
         <div style="color:#FAF7F2; font-size:0.85rem; flex:1; text-align:center; padding:0 12px;">
-            {pub_b['texte_banniere']}
-        </div>
+            {pub_b['texte_banniere']}</div>
         <a href="{pub_b['url']}" target="_blank"
            style="background:linear-gradient(135deg,#D4AF37,#C1440E);
                   color:white; padding:6px 16px; border-radius:6px;
                   font-weight:600; text-decoration:none; font-size:0.8rem; white-space:nowrap;">
-            {pub_b['cta_court']}
-        </a>
+            {pub_b['cta_court']}</a>
     </div>
     <div style="height:55px;"></div>
     """, unsafe_allow_html=True)
@@ -1128,4 +1098,6 @@ st.markdown("""
     Immo Maroc © 2026 — Veille intelligente du marché immobilier marocain<br>
     ✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True)git add .
+git commit -m "Full PostgreSQL support in dashboard"
+git push origin master
