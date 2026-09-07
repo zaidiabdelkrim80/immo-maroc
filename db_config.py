@@ -1,8 +1,7 @@
 import os
 import sqlite3
-from dotenv import load_dotenv
-load_dotenv()
-# Détecter si on est sur Streamlit Cloud ou en local
+
+
 def get_db_connection():
     """Retourne une connexion à la bonne BDD selon l'environnement"""
     db_url = ""
@@ -28,8 +27,8 @@ def get_db_connection():
             pass
 
     if db_url and "postgresql" in db_url:
-        import psycopg2
-        conn = psycopg2.connect(db_url)
+        import psycopg
+        conn = psycopg.connect(db_url)
         return conn, "postgresql"
     else:
         conn = sqlite3.connect("immo.db")
