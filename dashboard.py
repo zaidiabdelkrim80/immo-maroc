@@ -1,5 +1,4 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
 import plotly.express as px
 import folium
@@ -8,9 +7,10 @@ import random
 import os
 from streamlit_folium import st_folium
 
-# ── Charger les secrets (Streamlit Cloud ou local)
+# ── Charger les secrets
 try:
-    for key in ["GROQ_API_KEY", "STRIPE_PUBLIC_KEY", "STRIPE_SECRET_KEY", "DATABASE_URL"]:
+    for key in ["GROQ_API_KEY", "STRIPE_PUBLIC_KEY", "STRIPE_SECRET_KEY",
+                "DATABASE_URL", "SENDGRID_API_KEY", "SENDGRID_FROM_EMAIL"]:
         if key not in os.environ:
             val = st.secrets.get(key, "")
             if val:
@@ -25,59 +25,36 @@ except:
 from db_config import get_db_connection, get_placeholder
 from auth import (init_auth_db, inscrire_utilisateur, connecter_utilisateur,
                   get_credits, utiliser_credit, ajouter_credits,
-                  get_session_anonyme, utiliser_recherche_anonyme, enregistrer_recherche)
+                  get_session_anonyme, utiliser_recherche_anonyme,
+                  enregistrer_recherche, changer_mot_de_passe)
 from paiement import creer_session_paiement
+from email_service import (init_reset_table, envoyer_email_reset,
+                           verifier_token_reset, consommer_token_reset,
+                           envoyer_email_bienvenue)
 
 VILLES_COORDS = {
-    'Casablanca': [33.5731, -7.5898],
-    'Rabat': [34.0209, -6.8416],
-    'Marrakech': [31.6295, -7.9811],
-    'Fès': [34.0181, -5.0078],
-    'Tanger': [35.7595, -5.8340],
-    'Agadir': [30.4278, -9.5981],
-    'Meknès': [33.8935, -5.5473],
-    'Oujda': [34.6814, -1.9086],
-    'Kénitra': [34.2610, -6.5802],
-    'Tétouan': [35.5785, -5.3684],
-    'Salé': [34.0531, -6.7985],
-    'Nador': [35.1681, -2.9287],
-    'Mohammedia': [33.6866, -7.3830],
-    'El Jadida': [33.2316, -8.5007],
-    'Béni Mellal': [32.3373, -6.3498],
-    'Settat': [33.0010, -7.6197],
-    'Temara': [33.9287, -6.9091],
-    'Bouznika': [33.7914, -7.1586],
-    'Guéliz': [31.6340, -8.0089],
-    'Ain Sebaa': [33.6070, -7.5150],
-    'Bouskoura': [33.4500, -7.6500],
-    'Dar Bouazza': [33.4833, -7.7667],
+    'Casablanca': [33.5731, -7.5898], 'Rabat': [34.0209, -6.8416],
+    'Marrakech': [31.6295, -7.9811], 'Fès': [34.0181, -5.0078],
+    'Tanger': [35.7595, -5.8340], 'Agadir': [30.4278, -9.5981],
+    'Meknès': [33.8935, -5.5473], 'Oujda': [34.6814, -1.9086],
+    'Kénitra': [34.2610, -6.5802], 'Tétouan': [35.5785, -5.3684],
+    'Salé': [34.0531, -6.7985], 'Nador': [35.1681, -2.9287],
+    'Mohammedia': [33.6866, -7.3830], 'El Jadida': [33.2316, -8.5007],
+    'Béni Mellal': [32.3373, -6.3498], 'Settat': [33.0010, -7.6197],
+    'Temara': [33.9287, -6.9091], 'Bouznika': [33.7914, -7.1586],
+    'Guéliz': [31.6340, -8.0089], 'Ain Sebaa': [33.6070, -7.5150],
+    'Bouskoura': [33.4500, -7.6500], 'Dar Bouazza': [33.4833, -7.7667],
 }
 
 PUBS = [
-    {
-        "titre": "🏠 Mubawab.ma",
-        "desc": "Plus de 100 000 annonces immobilières au Maroc. Trouvez votre bien idéal !",
-        "texte_banniere": "🏠 Mubawab.ma — Des milliers d'annonces au Maroc",
-        "url": "https://www.mubawab.ma",
-        "cta": "Voir les annonces",
-        "cta_court": "Voir →"
-    },
-    {
-        "titre": "🔑 Yakeey.ma",
-        "desc": "L'immobilier neuf au Maroc — programmes, résidences, investissements.",
-        "texte_banniere": "🔑 Yakeey.ma — L'immobilier neuf au Maroc",
-        "url": "https://www.yakeey.com",
-        "cta": "Découvrir Yakeey",
-        "cta_court": "Découvrir →"
-    },
-    {
-        "titre": "🏡 Sarouty.ma",
-        "desc": "Achat, vente, location — toute l'immobilier marocain en un clic.",
-        "texte_banniere": "🏡 Sarouty.ma — Achat, vente, location au Maroc",
-        "url": "https://www.sarouty.ma",
-        "cta": "Explorer Sarouty",
-        "cta_court": "Explorer →"
-    },
+    {"titre": "🏠 Mubawab.ma", "desc": "Plus de 100 000 annonces immobilières au Maroc",
+     "url": "https://www.mubawab.ma", "cta": "Voir →"},
+    {"titre": "🔑 Yakeey.com", "desc": "L'immobilier neuf au Maroc",
+     "url": "https://www.yakeey.com", "cta": "Découvrir →"},
+    {"titre": "🏡 Sarouty.ma", "desc": "Achat, vente, location au Maroc",
+     "url": "https://www.sarouty.ma", "cta": "Explorer →"},
+    {"titre": "💰 Crédit Immobilier", "desc": "Simulez votre prêt immobilier",
+     "url": "https://www.cih.co.ma", "cta": "Simuler →"},
 ]
 
 CSS = """
@@ -89,56 +66,161 @@ html, body, [class*="css"], .stApp, .main, .block-container {
     font-family: 'Inter', sans-serif;
     color: #FAF7F2 !important;
 }
-.main-header {
-    background: linear-gradient(135deg, #0a1f17 0%, #1B4332 40%, #D4AF37 100%);
-    padding: 40px 30px;
-    border-radius: 16px;
-    margin-bottom: 30px;
-    position: relative;
-    overflow: hidden;
-    border: 1px solid rgba(212, 175, 55, 0.3);
+
+/* ── Header professionnel */
+.pro-header {
+    background: linear-gradient(135deg, #0a1f17 0%, #1B4332 60%, #0d2b1e 100%);
+    padding: 0;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.4);
+    margin-bottom: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 999;
 }
-.main-header::before {
-    content: "✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦";
-    position: absolute;
-    top: 8px; left: 0; right: 0;
-    text-align: center;
-    color: rgba(212, 175, 55, 0.5);
-    font-size: 11px;
-    letter-spacing: 8px;
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
-.main-header::after {
-    content: "✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦";
-    position: absolute;
-    bottom: 8px; left: 0; right: 0;
-    text-align: center;
-    color: rgba(212, 175, 55, 0.5);
-    font-size: 11px;
-    letter-spacing: 8px;
-}
-.main-title {
+.header-logo {
     font-family: 'Playfair Display', serif;
-    font-size: 2.8rem;
+    font-size: 1.6rem;
     font-weight: 700;
     color: #FAF7F2;
-    text-align: center;
-    margin: 0;
-    text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-.main-subtitle {
-    font-size: 0.95rem;
+.header-logo span { color: #D4AF37; }
+.header-search {
+    flex: 1;
+    max-width: 400px;
+    margin: 0 24px;
+}
+.header-search input {
+    width: 100%;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(212,175,55,0.4);
+    background: rgba(255,255,255,0.08);
+    color: #FAF7F2;
+    font-size: 0.9rem;
+}
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.btn-login {
+    background: transparent;
+    border: 1px solid #D4AF37;
+    color: #D4AF37 !important;
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.btn-login:hover { background: rgba(212,175,55,0.15); }
+.btn-register {
+    background: linear-gradient(135deg, #D4AF37, #C1440E);
+    border: none;
+    color: white !important;
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+}
+.credits-pill {
+    background: linear-gradient(135deg, #D4AF37, #C1440E);
+    color: white !important;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+.user-pill {
+    background: rgba(82,183,136,0.2);
+    border: 1px solid #52B788;
+    color: #9AE6B4 !important;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+/* ── Modal auth */
+.modal-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+}
+.modal-box {
+    background: linear-gradient(135deg, #0a1f17, #1B4332);
+    border: 1px solid rgba(212,175,55,0.4);
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+    animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
     color: #D4AF37;
     text-align: center;
-    margin-top: 8px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
+    margin-bottom: 24px;
 }
+.modal-tab {
+    display: flex;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 24px;
+    gap: 4px;
+}
+.modal-tab-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+.modal-tab-btn.active {
+    background: linear-gradient(135deg, #D4AF37, #C1440E);
+    color: white;
+}
+.modal-tab-btn.inactive {
+    background: transparent;
+    color: rgba(250,247,242,0.6);
+}
+
+/* ── KPI Cards */
 .kpi-card {
     background: rgba(255,255,255,0.07);
     border-radius: 12px;
     padding: 20px;
     text-align: center;
-    border: 1px solid rgba(212, 175, 55, 0.4);
+    border: 1px solid rgba(212,175,55,0.4);
     border-top: 4px solid #D4AF37;
     margin-bottom: 10px;
 }
@@ -150,53 +232,44 @@ html, body, [class*="css"], .stApp, .main, .block-container {
 }
 .kpi-label {
     font-size: 0.82rem;
-    color: rgba(250, 247, 242, 0.7);
+    color: rgba(250,247,242,0.7);
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-top: 4px;
 }
+
+/* ── Sidebar */
 section[data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0a1f17 0%, #112b21 100%) !important;
-    border-right: 2px solid #D4AF37 !important;
+    border-right: 2px solid rgba(212,175,55,0.3) !important;
 }
 section[data-testid="stSidebar"] label,
 section[data-testid="stSidebar"] p,
 section[data-testid="stSidebar"] span,
-section[data-testid="stSidebar"] div,
-section[data-testid="stSidebar"] h1,
-section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3 {
+section[data-testid="stSidebar"] div {
     color: #FAF7F2 !important;
 }
 section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
     background-color: #0a1f17 !important;
-    border: 1px solid rgba(212, 175, 55, 0.4) !important;
+    border: 1px solid rgba(212,175,55,0.4) !important;
     border-radius: 8px !important;
 }
-section[data-testid="stSidebar"] div[data-baseweb="select"] *,
-section[data-testid="stSidebar"] div[data-baseweb="select"] div,
-section[data-testid="stSidebar"] div[data-baseweb="select"] span,
-section[data-testid="stSidebar"] div[data-baseweb="select"] input {
+section[data-testid="stSidebar"] div[data-baseweb="select"] * {
     color: #FAF7F2 !important;
     background-color: transparent !important;
     -webkit-text-fill-color: #FAF7F2 !important;
 }
-section[data-testid="stSidebar"] div[data-baseweb="select"] svg {
-    fill: #D4AF37 !important;
-}
-section[data-testid="stSidebar"] input[type="number"],
-section[data-testid="stSidebar"] input[type="text"],
-section[data-testid="stSidebar"] input[type="email"],
-section[data-testid="stSidebar"] input[type="password"] {
+section[data-testid="stSidebar"] div[data-baseweb="select"] svg { fill: #D4AF37 !important; }
+section[data-testid="stSidebar"] input[type="number"] {
     background-color: #0a1f17 !important;
     color: #FAF7F2 !important;
     -webkit-text-fill-color: #FAF7F2 !important;
-    border: 1px solid rgba(212, 175, 55, 0.4) !important;
+    border: 1px solid rgba(212,175,55,0.4) !important;
     border-radius: 8px !important;
 }
 section[data-testid="stSidebar"] .stNumberInput > div {
     background-color: #0a1f17 !important;
-    border: 1px solid rgba(212, 175, 55, 0.4) !important;
+    border: 1px solid rgba(212,175,55,0.4) !important;
     border-radius: 8px !important;
 }
 section[data-testid="stSidebar"] .stNumberInput button {
@@ -204,199 +277,113 @@ section[data-testid="stSidebar"] .stNumberInput button {
     color: #D4AF37 !important;
     border: none !important;
 }
-.sidebar-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.3rem;
-    color: #D4AF37 !important;
-    text-align: center;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-    margin-bottom: 15px;
-}
-div[data-baseweb="popover"],
-div[data-baseweb="popover"] * {
+div[data-baseweb="popover"], div[data-baseweb="popover"] * {
     background-color: #0a1f17 !important;
     color: #FAF7F2 !important;
 }
 div[data-baseweb="menu"] {
     background-color: #0a1f17 !important;
-    border: 1px solid rgba(212, 175, 55, 0.4) !important;
+    border: 1px solid rgba(212,175,55,0.4) !important;
     border-radius: 8px !important;
 }
-div[role="option"] {
-    background-color: #0a1f17 !important;
-    color: #FAF7F2 !important;
-}
-div[role="option"]:hover {
-    background-color: rgba(212, 175, 55, 0.15) !important;
-    color: #D4AF37 !important;
-}
-div[aria-selected="true"] {
-    background-color: rgba(212, 175, 55, 0.2) !important;
-    color: #D4AF37 !important;
-    font-weight: 600 !important;
-}
+div[role="option"] { background-color: #0a1f17 !important; color: #FAF7F2 !important; }
+div[role="option"]:hover { background-color: rgba(212,175,55,0.15) !important; color: #D4AF37 !important; }
+div[aria-selected="true"] { background-color: rgba(212,175,55,0.2) !important; color: #D4AF37 !important; }
+
+/* ── Tabs */
 .stTabs [data-baseweb="tab-list"] {
     background: rgba(255,255,255,0.06);
     border-radius: 10px;
     padding: 4px;
-    border: 1px solid rgba(212, 175, 55, 0.2);
+    border: 1px solid rgba(212,175,55,0.2);
 }
-.stTabs [data-baseweb="tab"] {
-    color: rgba(250, 247, 242, 0.7) !important;
-    border-radius: 8px;
-    padding: 8px 20px;
-    font-weight: 500;
-}
-.stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #D4AF37, #C1440E) !important;
-    color: white !important;
-}
+.stTabs [data-baseweb="tab"] { color: rgba(250,247,242,0.7) !important; border-radius: 8px; padding: 8px 20px; }
+.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #D4AF37, #C1440E) !important; color: white !important; }
+
+/* ── Annonce cards */
 .annonce-card {
     background: rgba(255,255,255,0.06);
     border-radius: 12px;
     padding: 16px 20px;
     margin: 8px 0;
-    border: 1px solid rgba(212, 175, 55, 0.2);
+    border: 1px solid rgba(212,175,55,0.2);
     border-left: 4px solid #D4AF37;
     transition: transform 0.2s, background 0.2s;
 }
-.annonce-card:hover {
-    transform: translateX(4px);
-    background: rgba(255,255,255,0.1);
-}
-.annonce-titre {
-    font-family: 'Playfair Display', serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #FAF7F2;
-    margin-bottom: 10px;
-}
-.annonce-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-weight: 500;
-    margin-right: 6px;
-    margin-top: 4px;
-}
+.annonce-card:hover { transform: translateX(4px); background: rgba(255,255,255,0.1); }
+.annonce-titre { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: #FAF7F2; margin-bottom: 10px; }
+.annonce-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; margin-right: 6px; margin-top: 4px; }
 .badge-prix { background: rgba(212,175,55,0.15); color: #D4AF37; border: 1px solid rgba(212,175,55,0.5); }
 .badge-surface { background: rgba(99,179,237,0.15); color: #90CDF4; border: 1px solid rgba(99,179,237,0.4); }
 .badge-ville { background: rgba(154,230,180,0.15); color: #9AE6B4; border: 1px solid rgba(154,230,180,0.4); }
 .badge-source { background: rgba(252,129,74,0.15); color: #FC814A; border: 1px solid rgba(252,129,74,0.4); }
-.alerte-card {
-    background: rgba(212, 175, 55, 0.08);
-    border-radius: 10px;
-    padding: 14px 18px;
-    margin: 8px 0;
-    border: 1px solid rgba(212, 175, 55, 0.3);
-    border-left: 4px solid #D4AF37;
-}
-.section-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.3rem;
-    color: #D4AF37;
-    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-    padding-bottom: 8px;
-    margin-bottom: 16px;
-}
-.separateur {
-    text-align: center;
-    color: #D4AF37;
-    font-size: 1.2rem;
-    letter-spacing: 12px;
-    margin: 20px 0;
-    opacity: 0.5;
-}
-.credits-badge {
-    background: linear-gradient(135deg, #D4AF37, #C1440E);
-    color: white !important;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    display: inline-block;
-    margin: 5px 0;
-}
-.pub-card {
-    background: rgba(212, 175, 55, 0.06);
-    border: 1px dashed rgba(212, 175, 55, 0.4);
-    border-radius: 10px;
-    padding: 14px;
-    text-align: center;
-    margin: 10px 0;
-}
-.lock-card {
-    background: rgba(193, 68, 14, 0.1);
-    border: 1px solid rgba(193, 68, 14, 0.4);
-    border-radius: 12px;
-    padding: 24px;
-    text-align: center;
-    margin: 20px 0;
-}
-.stButton button {
-    background: linear-gradient(135deg, #D4AF37, #C1440E) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    width: 100% !important;
-}
-.modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.75);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-}
-.modal-content {
-    background: linear-gradient(135deg, #0a1f17, #1B4332);
-    border: 1px solid #D4AF37;
-    border-radius: 16px;
-    padding: 32px;
-    max-width: 460px;
-    width: 90%;
-    text-align: center;
-    position: relative;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-    animation: fadeInScale 0.3s ease;
-}
-@keyframes fadeInScale {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-}
-.banniere-bas {
+
+/* ── Autres */
+.alerte-card { background: rgba(212,175,55,0.08); border-radius: 10px; padding: 14px 18px; margin: 8px 0; border: 1px solid rgba(212,175,55,0.3); border-left: 4px solid #D4AF37; }
+.section-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: #D4AF37; border-bottom: 1px solid rgba(212,175,55,0.3); padding-bottom: 8px; margin-bottom: 16px; }
+.separateur { text-align: center; color: #D4AF37; font-size: 1.2rem; letter-spacing: 12px; margin: 20px 0; opacity: 0.5; }
+.credits-badge { background: linear-gradient(135deg, #D4AF37, #C1440E); color: white !important; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: inline-block; margin: 5px 0; }
+.pub-card { background: rgba(212,175,55,0.06); border: 1px dashed rgba(212,175,55,0.4); border-radius: 10px; padding: 14px; text-align: center; margin: 10px 0; }
+.lock-card { background: rgba(193,68,14,0.1); border: 1px solid rgba(193,68,14,0.4); border-radius: 12px; padding: 24px; text-align: center; margin: 20px 0; }
+.stButton button { background: linear-gradient(135deg, #D4AF37, #C1440E) !important; color: white !important; border: none !important; border-radius: 8px !important; font-weight: 600 !important; width: 100% !important; }
+.succes-paiement { background: linear-gradient(135deg, rgba(82,183,136,0.2), rgba(27,67,50,0.8)); border: 1px solid #52B788; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px; }
+
+/* ── Footer défilant */
+.footer-marquee {
+    background: linear-gradient(90deg, #0a1f17 0%, #112b21 50%, #0a1f17 100%);
+    border-top: 1px solid rgba(212,175,55,0.4);
+    padding: 0;
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: linear-gradient(90deg, #0a1f17 0%, #1B4332 50%, #0a1f17 100%);
-    border-top: 1px solid rgba(212,175,55,0.4);
-    padding: 10px 24px;
+    z-index: 1000;
+    overflow: hidden;
+    height: 44px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    z-index: 1000;
-    gap: 12px;
 }
-.succes-paiement {
-    background: linear-gradient(135deg, rgba(82,183,136,0.2), rgba(27,67,50,0.8));
-    border: 1px solid #52B788;
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    margin-bottom: 20px;
+.marquee-track {
+    display: flex;
+    animation: marquee 30s linear infinite;
+    white-space: nowrap;
 }
-p, span, label, h1, h2, h3 {
+.marquee-track:hover { animation-play-state: paused; }
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.marquee-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 32px;
+    color: rgba(250,247,242,0.8);
+    font-size: 0.82rem;
+    border-right: 1px solid rgba(212,175,55,0.2);
+}
+.marquee-item a { color: #D4AF37 !important; text-decoration: none; font-weight: 600; }
+.marquee-sep { color: rgba(212,175,55,0.4); padding: 0 8px; }
+
+/* ── Inputs auth */
+section[data-testid="stSidebar"] input[type="text"],
+section[data-testid="stSidebar"] input[type="email"],
+section[data-testid="stSidebar"] input[type="password"] {
+    background-color: #0a1f17 !important;
     color: #FAF7F2 !important;
+    -webkit-text-fill-color: #FAF7F2 !important;
+    border: 1px solid rgba(212,175,55,0.4) !important;
+    border-radius: 8px !important;
 }
+
+p, span, label, h1, h2, h3 { color: #FAF7F2 !important; }
 </style>
 """
 
 
-def get_annonces(ville=None, prix_min=None, prix_max=None, surface_min=None, surface_max=None, source=None):
+# ══════════════════════════════════════════════
+# FONCTIONS DB
+# ══════════════════════════════════════════════
+
+def get_annonces(ville=None, prix_min=None, prix_max=None, surface_min=None, surface_max=None, source=None, recherche=None):
     try:
         conn, db_type = get_db_connection()
         ph = get_placeholder(db_type)
@@ -420,12 +407,14 @@ def get_annonces(ville=None, prix_min=None, prix_max=None, surface_min=None, sur
         if source and source != "Toutes":
             query += f" AND source = {ph}"
             params.append(source)
-        query += " ORDER BY prix_dh ASC"
+        if recherche:
+            query += f" AND titre ILIKE {ph}" if db_type == "postgresql" else f" AND titre LIKE {ph}"
+            params.append(f"%{recherche}%")
+        query += " ORDER BY prix_dh ASC NULLS LAST" if db_type == "postgresql" else " ORDER BY prix_dh ASC"
         df = pd.read_sql_query(query, conn, params=params)
         conn.close()
         return df
     except Exception as e:
-        print(f"Erreur get_annonces: {e}")
         return pd.DataFrame()
 
 
@@ -477,8 +466,7 @@ def get_alertes(budget_max, surface_min, ville=None):
         ph = get_placeholder(db_type)
         query = f"""
             SELECT titre, prix_dh, surface_m2, prix_m2, ville, url, source
-            FROM annonces
-            WHERE prix_dh <= {ph} AND prix_dh IS NOT NULL
+            FROM annonces WHERE prix_dh <= {ph} AND prix_dh IS NOT NULL
             AND surface_m2 >= {ph} AND surface_m2 IS NOT NULL
         """
         params = [budget_max, surface_min]
@@ -493,94 +481,11 @@ def get_alertes(budget_max, surface_min, ville=None):
         return pd.DataFrame()
 
 
-def afficher_pub_sidebar():
-    pub = random.choice(PUBS)
-    st.sidebar.markdown(f"""
-    <div style="background:rgba(212,175,55,0.06); border:1px dashed rgba(212,175,55,0.4);
-         border-radius:10px; padding:12px; text-align:center; margin:8px 0;">
-        <div style="font-size:0.65rem; color:rgba(250,247,242,0.4);
-             text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Publicité</div>
-        <b style="color:#D4AF37; font-size:0.9rem;">{pub['titre']}</b><br>
-        <span style="font-size:0.75rem; color:rgba(250,247,242,0.6);">{pub['desc'][:60]}...</span><br>
-        <a href="{pub['url']}" target="_blank"
-           style="color:#D4AF37; font-weight:600; text-decoration:none; font-size:0.8rem;">
-            {pub['cta_court']}
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-def afficher_sidebar_auth():
-    st.sidebar.markdown('<div class="sidebar-title">✦ Filtres ✦</div>', unsafe_allow_html=True)
-
-    if st.session_state.get("user_email"):
-        email = st.session_state["user_email"]
-        credits = get_credits(email)
-        st.sidebar.markdown(f"""
-        <div style="text-align:center; margin-bottom:10px; padding:10px;
-             background:rgba(212,175,55,0.08); border-radius:8px;
-             border:1px solid rgba(212,175,55,0.3);">
-            <div style="color:#9AE6B4; font-size:0.85rem;">✅ Connecté</div>
-            <div style="color:#D4AF37; font-size:0.8rem;">{email}</div>
-            <div class="credits-badge">💎 {credits} crédits</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.sidebar.button("🚪 Déconnexion"):
-            st.session_state.pop("user_email", None)
-            st.session_state.pop("resultats_recherche", None)
-            st.session_state["modal_shown"] = False
-            st.rerun()
-    else:
-        if "session_id" not in st.session_state:
-            st.session_state["session_id"] = str(uuid.uuid4())
-        session = get_session_anonyme(st.session_state["session_id"])
-        restantes = session[1] if session else 5
-        st.sidebar.markdown(f"""
-        <div style="text-align:center; margin-bottom:10px; padding:10px;
-             background:rgba(212,175,55,0.08); border-radius:8px;
-             border:1px solid rgba(212,175,55,0.3);">
-            <div style="color:#D4AF37; font-weight:600;">👤 Visiteur anonyme</div>
-            <div style="color:#FAF7F2; font-size:0.85rem; margin-top:4px;">
-                🔍 {restantes} recherche(s) gratuite(s)
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        with st.sidebar.expander("🔐 Se connecter / S'inscrire"):
-            mode = st.radio("Mode", ["Connexion", "Inscription"], horizontal=True, label_visibility="collapsed")
-            if mode == "Connexion":
-                email = st.text_input("📧 Email", key="login_email")
-                password = st.text_input("🔒 Mot de passe", type="password", key="login_password")
-                if st.button("Se connecter"):
-                    user = connecter_utilisateur(email, password)
-                    if user:
-                        st.session_state["user_email"] = email
-                        st.session_state.pop("resultats_recherche", None)
-                        st.session_state["modal_shown"] = False
-                        st.success("✅ Connecté !")
-                        st.rerun()
-                    else:
-                        st.error("❌ Email ou mot de passe incorrect")
-            else:
-                nom = st.text_input("👤 Nom", key="reg_nom")
-                email = st.text_input("📧 Email", key="reg_email")
-                password = st.text_input("🔒 Mot de passe", type="password", key="reg_password")
-                if st.button("S'inscrire"):
-                    ok, msg = inscrire_utilisateur(email, password, nom)
-                    if ok:
-                        st.session_state["user_email"] = email
-                        st.success(msg)
-                        st.rerun()
-                    else:
-                        st.error(msg)
-
-    st.sidebar.markdown("---")
-
-
-# ════════════════════════════════
+# ══════════════════════════════════════════════
 # INIT
-# ════════════════════════════════
+# ══════════════════════════════════════════════
 init_auth_db()
+init_reset_table()
 
 st.set_page_config(
     page_title="Immo Maroc — Veille Immobilière",
@@ -589,8 +494,17 @@ st.set_page_config(
 )
 st.markdown(CSS, unsafe_allow_html=True)
 
-# ── Retour paiement Stripe
+# ── Gestion reset password via URL
 query_params = st.query_params
+action = query_params.get("action", "")
+reset_token = query_params.get("token", "")
+
+if action == "reset" and reset_token:
+    st.session_state["reset_mode"] = True
+    st.session_state["reset_token"] = reset_token
+    st.query_params.clear()
+
+# ── Retour paiement Stripe
 paiement_status = query_params.get("paiement", "")
 email_paye = query_params.get("email", "")
 pack_paye = query_params.get("pack", "")
@@ -610,57 +524,86 @@ est_payant = False
 if st.session_state.get("user_email"):
     est_payant = get_credits(st.session_state["user_email"]) > 50
 
-# ── Modal pub
-if "modal_shown" not in st.session_state:
-    st.session_state["modal_shown"] = False
+# ══════════════════════════════════════════════
+# MODE RESET PASSWORD
+# ══════════════════════════════════════════════
+if st.session_state.get("reset_mode"):
+    token = st.session_state.get("reset_token", "")
+    email_reset, msg_token = verifier_token_reset(token)
 
-if not st.session_state["modal_shown"] and not est_payant:
-    pub = random.choice(PUBS)
-    st.markdown(f"""
-    <div class="modal-overlay" id="modal-pub">
-        <div class="modal-content">
-            <div style="font-size:0.7rem; color:rgba(250,247,242,0.4);
-                 text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">
-                Publicité partenaire — Soutenez Immo Maroc
-            </div>
-            <div style="font-size:2.5rem; margin-bottom:8px;">🏠</div>
-            <div style="font-family:'Playfair Display',serif; font-size:1.4rem;
-                 color:#D4AF37; margin-bottom:12px; font-weight:700;">{pub['titre']}</div>
-            <div style="color:rgba(250,247,242,0.8); font-size:0.9rem;
-                 margin-bottom:24px; line-height:1.6;">{pub['desc']}</div>
-            <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                <a href="{pub['url']}" target="_blank"
-                   style="background:linear-gradient(135deg,#D4AF37,#C1440E);
-                          color:white; padding:10px 24px; border-radius:8px;
-                          font-weight:600; text-decoration:none; font-size:0.9rem;">
-                    {pub['cta']} →
-                </a>
-                <button onclick="document.getElementById('modal-pub').style.display='none'"
-                        style="background:rgba(255,255,255,0.08); color:#FAF7F2;
-                               padding:10px 24px; border-radius:8px;
-                               border:1px solid rgba(255,255,255,0.2);
-                               font-weight:600; cursor:pointer; font-size:0.9rem;">
-                    ✕ Fermer
-                </button>
-            </div>
-            <div style="margin-top:16px; font-size:0.72rem; color:rgba(250,247,242,0.3);">
-                Supprimez les pubs en passant à un pack payant
+    st.markdown("""
+    <div style="max-width:440px; margin:60px auto;">
+    """, unsafe_allow_html=True)
+
+    if email_reset:
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#0a1f17,#1B4332);
+             border:1px solid rgba(212,175,55,0.4); border-radius:20px; padding:40px; text-align:center;">
+            <h2 style="color:#D4AF37; font-family:'Playfair Display',serif;">🔑 Nouveau mot de passe</h2>
+            <p style="color:rgba(250,247,242,0.7);">Pour le compte : <b style="color:#D4AF37;">{email_reset}</b></p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        nouveau_mdp = st.text_input("Nouveau mot de passe", type="password", key="new_pwd")
+        confirm_mdp = st.text_input("Confirmer le mot de passe", type="password", key="confirm_pwd")
+
+        if st.button("✅ Changer le mot de passe"):
+            if len(nouveau_mdp) < 6:
+                st.error("❌ Mot de passe trop court (minimum 6 caractères)")
+            elif nouveau_mdp != confirm_mdp:
+                st.error("❌ Les mots de passe ne correspondent pas")
+            else:
+                changer_mot_de_passe(email_reset, nouveau_mdp)
+                consommer_token_reset(token)
+                st.success("✅ Mot de passe changé ! Vous pouvez vous connecter.")
+                st.session_state.pop("reset_mode", None)
+                st.session_state.pop("reset_token", None)
+                st.rerun()
+    else:
+        st.error(msg_token)
+        if st.button("Retour à l'accueil"):
+            st.session_state.pop("reset_mode", None)
+            st.rerun()
+
+    st.stop()
+
+# ══════════════════════════════════════════════
+# HEADER PROFESSIONNEL
+# ══════════════════════════════════════════════
+user_email = st.session_state.get("user_email")
+credits_user = get_credits(user_email) if user_email else 0
+
+if user_email:
+    header_right = f"""
+    <div class="header-actions">
+        <span class="user-pill">✅ {user_email.split('@')[0]}</span>
+        <span class="credits-pill">💎 {credits_user} crédits</span>
+    </div>
+    """
+else:
+    header_right = """
+    <div class="header-actions">
+        <a href="#" class="btn-login" onclick="window.parent.document.querySelector('[data-testid=stSidebar]').style.display='block'">
+            Se connecter
+        </a>
+        <a href="#" class="btn-register">S'inscrire</a>
+    </div>
+    """
+
+st.markdown(f"""
+<div class="pro-header">
+    <div class="header-inner">
+        <div class="header-logo">
+            <img src="https://flagcdn.com/w32/ma.png" style="height:28px; border-radius:3px;">
+            Immo<span>Maroc</span>
+        </div>
+        <div style="flex:1; max-width:380px; margin:0 20px;">
+            <div style="color:rgba(250,247,242,0.5); font-size:0.8rem; text-align:center; letter-spacing:1px;">
+                VEILLE INTELLIGENTE DU MARCHÉ IMMOBILIER MAROCAIN
             </div>
         </div>
+        {header_right}
     </div>
-    """, unsafe_allow_html=True)
-    st.session_state["modal_shown"] = True
-
-# ── Header
-st.markdown("""
-<div class="main-header">
-    <div class="main-title">
-        <img src="https://flagcdn.com/w40/ma.png"
-             style="height:45px; vertical-align:middle; margin-right:12px;
-                    border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
-        Immo Maroc
-    </div>
-    <div class="main-subtitle">Veille intelligente du marché immobilier marocain</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -670,57 +613,161 @@ if st.session_state.get("paiement_succes"):
     st.markdown(f"""
     <div class="succes-paiement">
         <div style="font-size:2rem;">🎉</div>
-        <div style="font-family:'Playfair Display',serif; font-size:1.3rem; color:#52B788; margin:8px 0;">
-            Paiement confirmé !</div>
-        <div style="color:#FAF7F2; font-size:0.95rem;">
-            Pack <b style="color:#D4AF37;">{info['pack'].capitalize()}</b> activé —
-            <b style="color:#D4AF37;">+{info['credits']} crédits</b> ajoutés
-        </div>
+        <div style="font-family:'Playfair Display',serif; font-size:1.3rem; color:#52B788; margin:8px 0;">Paiement confirmé !</div>
+        <div style="color:#FAF7F2;">Pack <b style="color:#D4AF37;">{info['pack'].capitalize()}</b> — <b style="color:#D4AF37;">+{info['credits']} crédits</b></div>
     </div>
     """, unsafe_allow_html=True)
     st.session_state.pop("paiement_succes", None)
 
-# ── Sidebar
-afficher_sidebar_auth()
-villes = get_villes()
-ville_choisie = st.sidebar.selectbox("🏙️ Ville", villes)
-sources = get_sources()
-source_choisie = st.sidebar.selectbox("🌐 Source", sources)
-st.sidebar.markdown("---")
-st.sidebar.markdown("**💰 Budget (DH)**")
-prix_min = st.sidebar.number_input("Minimum", min_value=0, value=0, step=50000)
-prix_max = st.sidebar.number_input("Maximum", min_value=0, value=10000000, step=50000)
-st.sidebar.markdown("**📐 Surface (m²)**")
-surface_min = st.sidebar.number_input("Minimum ", min_value=0, value=0, step=10)
-surface_max = st.sidebar.number_input("Maximum ", min_value=0, value=1000, step=10)
-st.sidebar.markdown("---")
-
-if not est_payant:
-    afficher_pub_sidebar()
-
+# ══════════════════════════════════════════════
+# SIDEBAR — FILTRES UNIQUEMENT
+# ══════════════════════════════════════════════
 st.sidebar.markdown("""
-<div style="text-align:center; color:#D4AF37; font-size:0.8rem; opacity:0.7; margin-top:10px;">
-✦ ◆ ✦ ◆ ✦ ◆ ✦<br>Immo Maroc © 2026
+<div style="text-align:center; padding:16px 0 10px 0;">
+    <div style="font-family:'Playfair Display',serif; font-size:1.1rem; color:#D4AF37; font-weight:600;">
+        🔍 Filtres de recherche
+    </div>
+    <div style="height:1px; background:rgba(212,175,55,0.3); margin-top:10px;"></div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Données
+# Auth dans sidebar
+if not user_email:
+    with st.sidebar.expander("🔐 Connexion / Inscription", expanded=False):
+        auth_tab = st.radio("Mode", ["Connexion", "Inscription", "Mot de passe oublié"],
+                           label_visibility="collapsed")
+
+        if auth_tab == "Connexion":
+            email_in = st.text_input("📧 Email", key="s_login_email")
+            pwd_in = st.text_input("🔒 Mot de passe", type="password", key="s_login_pwd")
+            if st.button("Se connecter", key="btn_login"):
+                if email_in and pwd_in:
+                    user = connecter_utilisateur(email_in, pwd_in)
+                    if user:
+                        st.session_state["user_email"] = email_in
+                        st.success("✅ Connecté !")
+                        st.rerun()
+                    else:
+                        st.error("❌ Email ou mot de passe incorrect")
+
+        elif auth_tab == "Inscription":
+            nom_in = st.text_input("👤 Nom complet", key="s_reg_nom")
+            email_in = st.text_input("📧 Email", key="s_reg_email")
+            pwd_in = st.text_input("🔒 Mot de passe", type="password", key="s_reg_pwd")
+            pwd2_in = st.text_input("🔒 Confirmer", type="password", key="s_reg_pwd2")
+            if st.button("Créer mon compte", key="btn_register"):
+                if not nom_in or not email_in or not pwd_in:
+                    st.error("❌ Remplissez tous les champs")
+                elif pwd_in != pwd2_in:
+                    st.error("❌ Mots de passe différents")
+                elif len(pwd_in) < 6:
+                    st.error("❌ Mot de passe trop court")
+                else:
+                    ok, msg = inscrire_utilisateur(email_in, pwd_in, nom_in)
+                    if ok:
+                        st.session_state["user_email"] = email_in
+                        envoyer_email_bienvenue(email_in, nom_in)
+                        st.success(msg)
+                        st.rerun()
+                    else:
+                        st.error(msg)
+
+        else:  # Mot de passe oublié
+            email_reset = st.text_input("📧 Votre email", key="s_reset_email")
+            if st.button("📧 Envoyer le lien", key="btn_reset"):
+                if email_reset:
+                    ok, msg = envoyer_email_reset(email_reset)
+                    if ok:
+                        st.success(msg)
+                    else:
+                        st.error(msg)
+else:
+    st.sidebar.markdown(f"""
+    <div style="text-align:center; padding:10px; background:rgba(82,183,136,0.1);
+         border-radius:10px; border:1px solid rgba(82,183,136,0.3); margin-bottom:12px;">
+        <div style="color:#9AE6B4; font-size:0.85rem;">✅ {user_email}</div>
+        <div class="credits-badge" style="margin-top:6px;">💎 {credits_user} crédits</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.sidebar.button("🚪 Déconnexion"):
+        st.session_state.pop("user_email", None)
+        st.session_state.pop("resultats_recherche", None)
+        st.rerun()
+    st.sidebar.markdown("---")
+
+# Filtres
+st.sidebar.markdown("**🏙️ Ville**")
+villes = get_villes()
+ville_choisie = st.sidebar.selectbox("Ville", villes, label_visibility="collapsed")
+
+st.sidebar.markdown("**🌐 Source**")
+sources = get_sources()
+source_choisie = st.sidebar.selectbox("Source", sources, label_visibility="collapsed")
+
+st.sidebar.markdown("**🏠 Type de bien**")
+type_choisie = st.sidebar.selectbox("Type", ["Tous", "appartement", "villa", "studio", "terrain", "bureau"], label_visibility="collapsed")
+
+st.sidebar.markdown("**💰 Budget (DH)**")
+col_s1, col_s2 = st.sidebar.columns(2)
+with col_s1:
+    prix_min = st.number_input("Min", min_value=0, value=0, step=50000, label_visibility="collapsed", key="prix_min")
+with col_s2:
+    prix_max = st.number_input("Max", min_value=0, value=10000000, step=50000, label_visibility="collapsed", key="prix_max")
+
+st.sidebar.markdown("**📐 Surface (m²)**")
+col_s3, col_s4 = st.sidebar.columns(2)
+with col_s3:
+    surface_min = st.number_input("Min", min_value=0, value=0, step=10, label_visibility="collapsed", key="surf_min")
+with col_s4:
+    surface_max = st.number_input("Max", min_value=0, value=1000, step=10, label_visibility="collapsed", key="surf_max")
+
+st.sidebar.markdown("---")
+
+# Pub sidebar uniquement si pas payant
+if not est_payant:
+    pub_s = random.choice(PUBS)
+    st.sidebar.markdown(f"""
+    <div style="background:rgba(212,175,55,0.06); border:1px dashed rgba(212,175,55,0.3);
+         border-radius:10px; padding:12px; text-align:center;">
+        <div style="font-size:0.6rem; color:rgba(250,247,242,0.35); text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Publicité</div>
+        <b style="color:#D4AF37; font-size:0.85rem;">{pub_s['titre']}</b><br>
+        <span style="font-size:0.75rem; color:rgba(250,247,242,0.6);">{pub_s['desc'][:50]}...</span><br>
+        <a href="{pub_s['url']}" target="_blank" style="color:#D4AF37; font-weight:600; text-decoration:none; font-size:0.8rem;">{pub_s['cta']}</a>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.sidebar.markdown("""
+<div style="text-align:center; color:rgba(212,175,55,0.4); font-size:0.75rem; margin-top:12px;">
+    ✦ ◆ ✦ ◆ ✦<br>Immo Maroc © 2026
+</div>
+""", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════
+# DONNÉES
+# ══════════════════════════════════════════════
+recherche_rapide = ""
 df = get_annonces(
     ville=ville_choisie,
     prix_min=prix_min if prix_min > 0 else None,
     prix_max=prix_max if prix_max < 10000000 else None,
     surface_min=surface_min if surface_min > 0 else None,
     surface_max=surface_max if surface_max < 1000 else None,
-    source=source_choisie
+    source=source_choisie,
 )
 total, avec_prix, prix_moyen, prix_m2_moyen = get_stats()
 
-# ── Tabs
+# Session anonyme
+if "session_id" not in st.session_state:
+    st.session_state["session_id"] = str(uuid.uuid4())
+
+# ══════════════════════════════════════════════
+# TABS
+# ══════════════════════════════════════════════
 tab1, tab2, tab3, tab4 = st.tabs(["📊 Tableau de bord", "🗺️ Carte interactive", "🔔 Alertes & Recherche", "💳 Recharger"])
 
-# ════════════════════════════════
+# ════════════════
 # TAB 1
-# ════════════════════════════════
+# ════════════════
 with tab1:
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -734,48 +781,44 @@ with tab1:
 
     st.markdown('<div class="separateur">✦ ◆ ✦ ◆ ✦</div>', unsafe_allow_html=True)
 
-    if df.empty:
-        st.info("📭 Aucune annonce disponible pour le moment.")
-    else:
+    if not df.empty:
         col_g1, col_g2 = st.columns(2)
         with col_g1:
             st.markdown('<div class="section-title">📍 Annonces par ville</div>', unsafe_allow_html=True)
-            df_villes = df[df['ville'].notna()]
-            if not df_villes.empty:
-                fig = px.bar(
-                    df_villes.groupby('ville').size().reset_index(name='count').sort_values('count', ascending=False).head(10),
+            df_v = df[df['ville'].notna()]
+            if not df_v.empty:
+                fig = px.bar(df_v.groupby('ville').size().reset_index(name='count').sort_values('count', ascending=False).head(10),
                     x='ville', y='count', color='count',
-                    color_continuous_scale=[[0, '#2d6a4f'], [0.5, '#D4AF37'], [1, '#C1440E']],
-                    labels={'ville': 'Ville', 'count': 'Annonces'}
-                )
+                    color_continuous_scale=[[0,'#2d6a4f'],[0.5,'#D4AF37'],[1,'#C1440E']],
+                    labels={'ville':'Ville','count':'Annonces'})
                 fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='#FAF7F2', family='Inter'), coloraxis_showscale=False)
+                    font=dict(color='#FAF7F2',family='Inter'), coloraxis_showscale=False)
                 fig.update_xaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
                 fig.update_yaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
                 st.plotly_chart(fig, use_container_width=True)
 
         with col_g2:
             st.markdown('<div class="section-title">💰 Distribution des prix</div>', unsafe_allow_html=True)
-            df_prix = df[df['prix_dh'].notna()]
-            if not df_prix.empty:
-                fig = px.histogram(df_prix, x='prix_dh', nbins=20,
-                    color_discrete_sequence=['#D4AF37'], labels={'prix_dh': 'Prix (DH)'})
+            df_p = df[df['prix_dh'].notna()]
+            if not df_p.empty:
+                fig = px.histogram(df_p, x='prix_dh', nbins=20,
+                    color_discrete_sequence=['#D4AF37'], labels={'prix_dh':'Prix (DH)'})
                 fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='#FAF7F2', family='Inter'))
+                    font=dict(color='#FAF7F2',family='Inter'))
                 fig.update_xaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
                 fig.update_yaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
                 st.plotly_chart(fig, use_container_width=True)
 
         st.markdown('<div class="section-title">📊 Prix vs Surface</div>', unsafe_allow_html=True)
-        df_scatter = df[df['prix_dh'].notna() & df['surface_m2'].notna()]
-        if not df_scatter.empty:
-            fig = px.scatter(df_scatter, x='surface_m2', y='prix_dh', color='ville',
-                hover_data=['titre', 'type_bien'],
-                color_discrete_sequence=['#D4AF37', '#C1440E', '#52B788', '#90CDF4', '#FC814A', '#B794F4'],
-                labels={'surface_m2': 'Surface (m²)', 'prix_dh': 'Prix (DH)'})
+        df_sc = df[df['prix_dh'].notna() & df['surface_m2'].notna()]
+        if not df_sc.empty:
+            fig = px.scatter(df_sc, x='surface_m2', y='prix_dh', color='ville',
+                hover_data=['titre','type_bien'],
+                color_discrete_sequence=['#D4AF37','#C1440E','#52B788','#90CDF4','#FC814A','#B794F4'],
+                labels={'surface_m2':'Surface (m²)','prix_dh':'Prix (DH)'})
             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#FAF7F2', family='Inter'),
-                legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#FAF7F2')))
+                font=dict(color='#FAF7F2',family='Inter'),
+                legend=dict(bgcolor='rgba(0,0,0,0)',font=dict(color='#FAF7F2')))
             fig.update_xaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
             fig.update_yaxes(tickcolor='#FAF7F2', gridcolor='rgba(255,255,255,0.1)')
             st.plotly_chart(fig, use_container_width=True)
@@ -785,19 +828,17 @@ with tab1:
 
     if not df.empty:
         for i, (_, row) in enumerate(df.iterrows()):
-            if i >= 5 and not st.session_state.get("user_email"):
+            if i >= 5 and not user_email:
                 st.markdown("""
                 <div class="lock-card">
                     <div style="font-size:2rem;">🔒</div>
-                    <div style="font-family:'Playfair Display',serif; font-size:1.2rem; color:#D4AF37; margin:8px 0;">
-                        Inscrivez-vous gratuitement</div>
-                    <div style="color:rgba(250,247,242,0.7); font-size:0.9rem;">
-                        Créez un compte gratuit pour voir toutes les annonces</div>
+                    <div style="font-family:'Playfair Display',serif; font-size:1.2rem; color:#D4AF37; margin:8px 0;">Inscrivez-vous gratuitement</div>
+                    <div style="color:rgba(250,247,242,0.7); font-size:0.9rem;">Créez un compte pour voir toutes les annonces + 5 crédits offerts !</div>
                 </div>
                 """, unsafe_allow_html=True)
                 break
             prix_str = f"{int(row['prix_dh']):,} DH" if pd.notna(row['prix_dh']) else "Prix non spécifié"
-            surface_str = f"{int(row['surface_m2'])} m²" if pd.notna(row['surface_m2']) else "Surface N/A"
+            surface_str = f"{int(row['surface_m2'])} m²" if pd.notna(row['surface_m2']) else "N/A"
             ville_str = row['ville'] if pd.notna(row['ville']) else "N/A"
             source_str = row['source'] if pd.notna(row['source']) else ""
             lien = row['url'] if pd.notna(row['url']) and row['url'] else "#"
@@ -809,293 +850,192 @@ with tab1:
                 <span class="annonce-badge badge-surface">📐 {surface_str}</span>
                 <span class="annonce-badge badge-ville">🏙️ {ville_str}</span>
                 <span class="annonce-badge badge-source">🌐 {source_str}</span>
-                <a href="{lien}" target="_blank"
-                   style="float:right; color:#D4AF37; font-weight:600; text-decoration:none; font-size:0.85rem;">
-                    Voir l'annonce →
-                </a>
+                <a href="{lien}" target="_blank" style="float:right; color:#D4AF37; font-weight:600; text-decoration:none; font-size:0.85rem;">Voir l'annonce →</a>
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("📭 Aucune annonce disponible.")
+        st.info("📭 Aucune annonce disponible pour le moment.")
 
-# ════════════════════════════════
+# ════════════════
 # TAB 2
-# ════════════════════════════════
+# ════════════════
 with tab2:
     st.markdown('<div class="section-title">🗺️ Carte des annonces par ville</div>', unsafe_allow_html=True)
-    carte = folium.Map(location=[31.7917, -7.0926], zoom_start=6, tiles='CartoDB dark_matter')
+    carte = folium.Map(location=[31.7917,-7.0926], zoom_start=6, tiles='CartoDB dark_matter')
     if not df.empty:
         df_carte = df[df['ville'].notna() & df['prix_dh'].notna()]
         if not df_carte.empty:
-            stats_villes = df_carte.groupby('ville').agg(
-                nb_annonces=('prix_dh', 'count'),
-                prix_moyen=('prix_dh', 'mean'),
-                prix_m2_moyen=('prix_m2', 'mean')
+            stats_v = df_carte.groupby('ville').agg(
+                nb_annonces=('prix_dh','count'), prix_moyen=('prix_dh','mean'), prix_m2_moyen=('prix_m2','mean')
             ).reset_index()
-            for _, row in stats_villes.iterrows():
+            for _, row in stats_v.iterrows():
                 ville = row['ville']
                 if ville in VILLES_COORDS:
                     coords = VILLES_COORDS[ville]
                     nb = int(row['nb_annonces'])
-                    prix_moy = int(row['prix_moyen'])
-                    prix_m2 = int(row['prix_m2_moyen']) if pd.notna(row['prix_m2_moyen']) else 0
-                    rayon = max(12, nb * 5)
-                    popup_html = f"""
-                    <div style="font-family:Georgia; min-width:200px; padding:10px;
-                         background:#1B4332; color:#FAF7F2; border-radius:8px; border:1px solid #D4AF37;">
-                        <h4 style="color:#D4AF37; margin:0 0 8px 0;
-                            border-bottom:1px solid rgba(212,175,55,0.4); padding-bottom:6px;">
-                            🕌 {ville}</h4>
-                        <b>📦 Annonces :</b> {nb}<br>
-                        <b>💰 Prix moyen :</b> {prix_moy:,} DH<br>
-                        <b>📐 Prix/m² :</b> {prix_m2:,} DH/m²
-                    </div>
-                    """
+                    pm = int(row['prix_moyen'])
+                    pm2 = int(row['prix_m2_moyen']) if pd.notna(row['prix_m2_moyen']) else 0
                     folium.CircleMarker(
-                        location=coords, radius=rayon,
-                        color='#D4AF37', fill=True,
-                        fill_color='#52B788', fill_opacity=0.7,
-                        popup=folium.Popup(popup_html, max_width=250),
-                        tooltip=f"🕌 {ville} — {nb} annonces — {prix_moy:,} DH"
+                        location=coords, radius=max(12,nb*5),
+                        color='#D4AF37', fill=True, fill_color='#52B788', fill_opacity=0.7,
+                        popup=folium.Popup(f"""<div style="background:#1B4332;color:#FAF7F2;padding:10px;border-radius:8px;border:1px solid #D4AF37;min-width:180px;">
+                            <h4 style="color:#D4AF37;margin:0 0 6px 0;">🕌 {ville}</h4>
+                            <b>📦</b> {nb} annonces<br><b>💰</b> {pm:,} DH<br><b>📐</b> {pm2:,} DH/m²</div>""", max_width=250),
+                        tooltip=f"🕌 {ville} — {nb} annonces"
                     ).add_to(carte)
     st_folium(carte, width=None, height=520)
     st.caption("💡 Cliquez sur un cercle pour voir les détails.")
 
-# ════════════════════════════════
+# ════════════════
 # TAB 3
-# ════════════════════════════════
+# ════════════════
 with tab3:
     st.markdown('<div class="section-title">🔔 Recherche personnalisée</div>', unsafe_allow_html=True)
 
-    if st.session_state.get("user_email"):
-        credits = get_credits(st.session_state["user_email"])
-        st.markdown(f'<div style="margin-bottom:10px;"><span class="credits-badge">💎 {credits} crédits disponibles</span></div>', unsafe_allow_html=True)
-        peut_chercher = credits > 0
+    if user_email:
+        credits_now = get_credits(user_email)
+        st.markdown(f'<div style="margin-bottom:10px;"><span class="credits-badge">💎 {credits_now} crédits disponibles</span></div>', unsafe_allow_html=True)
+        peut_chercher = credits_now > 0
     else:
-        if "session_id" not in st.session_state:
-            st.session_state["session_id"] = str(uuid.uuid4())
         session = get_session_anonyme(st.session_state["session_id"])
         restantes = session[1] if session else 0
-        st.info(f"👤 Visiteur anonyme — {restantes} recherche(s) gratuite(s) restante(s)")
+        st.info(f"👤 Visiteur anonyme — {restantes} recherche(s) gratuite(s)")
         peut_chercher = restantes > 0
 
     col_a1, col_a2, col_a3 = st.columns(3)
     with col_a1:
-        budget_alerte = st.number_input("💰 Budget maximum (DH)", min_value=100000, max_value=20000000, value=1000000, step=50000)
+        budget_alerte = st.number_input("💰 Budget max (DH)", min_value=100000, max_value=20000000, value=1000000, step=50000)
     with col_a2:
-        surface_alerte = st.number_input("📐 Surface minimum (m²)", min_value=20, max_value=500, value=60, step=10)
+        surface_alerte = st.number_input("📐 Surface min (m²)", min_value=20, max_value=500, value=60, step=10)
     with col_a3:
         ville_alerte = st.selectbox("🏙️ Ville", get_villes(), key="ville_alerte")
 
     if peut_chercher:
         if st.button("🔍 Lancer la recherche (1 crédit)", type="primary"):
-            credit_ok = False
-            if st.session_state.get("user_email"):
-                credit_ok = utiliser_credit(st.session_state["user_email"])
-            else:
-                credit_ok = utiliser_recherche_anonyme(st.session_state["session_id"])
-
+            credit_ok = utiliser_credit(user_email) if user_email else utiliser_recherche_anonyme(st.session_state["session_id"])
             if not credit_ok:
-                st.error("❌ Plus de crédits disponibles !")
-                st.session_state.pop("resultats_recherche", None)
+                st.error("❌ Plus de crédits !")
             else:
-                enregistrer_recherche(
-                    email=st.session_state.get("user_email"),
-                    session_id=st.session_state.get("session_id"),
-                    ville=ville_alerte,
-                    budget_max=budget_alerte,
-                    surface_min=surface_alerte
-                )
+                enregistrer_recherche(email=user_email, session_id=st.session_state["session_id"],
+                                     ville=ville_alerte, budget_max=budget_alerte, surface_min=surface_alerte)
                 df_res = get_alertes(budget_alerte, surface_alerte, ville_alerte)
                 st.session_state["resultats_recherche"] = df_res.to_dict('records') if not df_res.empty else []
                 st.rerun()
     else:
-        st.markdown("""
-        <div class="lock-card">
-            <div style="font-size:2rem;">🔒</div>
-            <div style="font-family:'Playfair Display',serif; font-size:1.2rem; color:#D4AF37; margin:8px 0;">
-                Plus de recherches disponibles</div>
-            <div style="color:rgba(250,247,242,0.7); font-size:0.9rem;">
-                Inscrivez-vous gratuitement ou rechargez vos crédits</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("""<div class="lock-card"><div style="font-size:2rem;">🔒</div>
+            <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:#D4AF37;margin:8px 0;">Plus de recherches</div>
+            <div style="color:rgba(250,247,242,0.7);font-size:0.9rem;">Inscrivez-vous ou rechargez vos crédits</div></div>""", unsafe_allow_html=True)
 
     if "resultats_recherche" in st.session_state:
         resultats = st.session_state["resultats_recherche"]
         if resultats:
             st.success(f"✅ {len(resultats)} annonce(s) trouvée(s) !")
             for row in resultats:
-                col1, col2 = st.columns([4, 1])
+                col1, col2 = st.columns([4,1])
                 with col1:
-                    prix_str = f"{int(row['prix_dh']):,} DH" if row.get('prix_dh') else "N/A"
-                    surface_str = f"{int(row['surface_m2'])} m²" if row.get('surface_m2') else "N/A"
-                    ville_str = row.get('ville', 'N/A') or 'N/A'
-                    st.markdown(f"""
-                    <div class="alerte-card">
+                    st.markdown(f"""<div class="alerte-card">
                         <b style="color:#FAF7F2;">🏠 {row.get('titre','')[:65]}</b><br><br>
-                        <span class="annonce-badge badge-prix">💰 {prix_str}</span>
-                        <span class="annonce-badge badge-surface">📐 {surface_str}</span>
-                        <span class="annonce-badge badge-ville">🏙️ {ville_str}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        <span class="annonce-badge badge-prix">💰 {f"{int(row['prix_dh']):,} DH" if row.get('prix_dh') else 'N/A'}</span>
+                        <span class="annonce-badge badge-surface">📐 {f"{int(row['surface_m2'])} m²" if row.get('surface_m2') else 'N/A'}</span>
+                        <span class="annonce-badge badge-ville">🏙️ {row.get('ville','N/A') or 'N/A'}</span>
+                    </div>""", unsafe_allow_html=True)
                 with col2:
                     if row.get('url'):
-                        st.markdown(f"""
-                        <a href="{row['url']}" target="_blank"
-                           style="display:block; text-align:center;
-                                  background:linear-gradient(135deg,#D4AF37,#C1440E);
-                                  color:white; padding:8px 12px; border-radius:8px;
-                                  font-weight:600; text-decoration:none;
-                                  margin-top:16px; font-size:0.85rem;">👁️ Voir</a>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f"""<a href="{row['url']}" target="_blank"
+                            style="display:block;text-align:center;background:linear-gradient(135deg,#D4AF37,#C1440E);
+                            color:white;padding:8px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:16px;">👁️ Voir</a>""", unsafe_allow_html=True)
         else:
-            st.warning("😔 Aucune annonce ne correspond. Élargissez votre budget.")
+            st.warning("😔 Aucune annonce ne correspond.")
 
-    if st.session_state.get("user_email"):
+    if user_email:
         st.markdown('<div class="separateur">✦ ◆ ✦ ◆ ✦</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-title">📺 Gagnez des crédits gratuits</div>', unsafe_allow_html=True)
-        col_pub1, col_pub2 = st.columns(2)
-        with col_pub1:
-            st.markdown("""
-            <div class="pub-card">
-                <div style="font-size:1.5rem;">📺</div>
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            st.markdown("""<div class="pub-card"><div style="font-size:1.5rem;">📺</div>
                 <b style="color:#D4AF37;">Voir une pub = +1 crédit</b><br>
-                <span style="font-size:0.8rem; color:rgba(250,247,242,0.6);">Soutenez Immo Maroc gratuitement</span>
-            </div>
-            """, unsafe_allow_html=True)
+                <span style="font-size:0.8rem;color:rgba(250,247,242,0.6);">Soutenez Immo Maroc</span></div>""", unsafe_allow_html=True)
             if st.button("▶️ Voir la pub (+1 crédit)"):
                 pub = random.choice(PUBS)
-                st.markdown(f"""
-                <div class="alerte-card" style="text-align:center;">
+                st.markdown(f"""<div class="alerte-card" style="text-align:center;">
                     <b style="color:#D4AF37;">{pub['titre']}</b><br>
                     <span style="font-size:0.85rem;">{pub['desc']}</span><br>
-                    <a href="{pub['url']}" target="_blank"
-                       style="color:#D4AF37; font-weight:600; text-decoration:none;">
-                        {pub['cta']} →</a>
-                </div>
-                """, unsafe_allow_html=True)
-                ajouter_credits(st.session_state["user_email"], 1)
+                    <a href="{pub['url']}" target="_blank" style="color:#D4AF37;font-weight:600;text-decoration:none;">{pub['cta']}</a>
+                </div>""", unsafe_allow_html=True)
+                ajouter_credits(user_email, 1)
                 st.success("✅ +1 crédit ajouté !")
                 st.rerun()
-        with col_pub2:
-            st.markdown("""
-            <div class="pub-card">
-                <div style="font-size:1.5rem;">📤</div>
+        with col_p2:
+            st.markdown("""<div class="pub-card"><div style="font-size:1.5rem;">📤</div>
                 <b style="color:#D4AF37;">Partager = +2 crédits</b><br>
-                <span style="font-size:0.8rem; color:rgba(250,247,242,0.6);">Partagez sur WhatsApp</span>
-            </div>
-            """, unsafe_allow_html=True)
-            st.markdown("""
-            <a href="https://wa.me/?text=Découvrez Immo Maroc https://maghreb-immo.streamlit.app"
-               target="_blank"
-               style="display:block; text-align:center;
-                      background:linear-gradient(135deg,#25D366,#128C7E);
-                      color:white; padding:8px 12px; border-radius:8px;
-                      font-weight:600; text-decoration:none; margin-bottom:8px; font-size:0.85rem;">
-                📤 Partager sur WhatsApp</a>
-            """, unsafe_allow_html=True)
+                <span style="font-size:0.8rem;color:rgba(250,247,242,0.6);">Partagez sur WhatsApp</span></div>""", unsafe_allow_html=True)
+            st.markdown("""<a href="https://wa.me/?text=Découvrez Immo Maroc https://maghreb-immo.streamlit.app" target="_blank"
+                style="display:block;text-align:center;background:linear-gradient(135deg,#25D366,#128C7E);
+                color:white;padding:8px;border-radius:8px;font-weight:600;text-decoration:none;margin-bottom:8px;">📤 WhatsApp</a>""", unsafe_allow_html=True)
             if st.button("✅ J'ai partagé (+2 crédits)"):
-                ajouter_credits(st.session_state["user_email"], 2)
-                st.success("✅ +2 crédits ajoutés !")
+                ajouter_credits(user_email, 2)
+                st.success("✅ +2 crédits !")
                 st.rerun()
 
-# ════════════════════════════════
+# ════════════════
 # TAB 4
-# ════════════════════════════════
+# ════════════════
 with tab4:
     st.markdown('<div class="section-title">💳 Recharger vos crédits</div>', unsafe_allow_html=True)
 
-    if not st.session_state.get("user_email"):
+    if not user_email:
         st.warning("👤 Connectez-vous pour accéder aux packs payants.")
     else:
-        email = st.session_state["user_email"]
-        credits = get_credits(email)
-        st.markdown(f'<div style="margin-bottom:20px;"><span class="credits-badge">💎 Solde actuel : {credits} crédits</span></div>', unsafe_allow_html=True)
+        credits_now = get_credits(user_email)
+        st.markdown(f'<div style="margin-bottom:20px;"><span class="credits-badge">💎 Solde : {credits_now} crédits</span></div>', unsafe_allow_html=True)
 
         col_p1, col_p2, col_p3 = st.columns(3)
-        with col_p1:
-            st.markdown("""
-            <div class="kpi-card" style="border-top:4px solid #52B788;">
-                <div style="font-size:1.5rem;">🌱</div>
-                <div class="kpi-value" style="color:#52B788;">9,99 €</div>
-                <div style="color:#D4AF37; font-weight:600; margin:8px 0;">Pack Starter</div>
-                <div style="color:rgba(250,247,242,0.7); font-size:0.85rem; line-height:2;">
-                    💎 100 crédits<br>🔍 100 recherches<br>✅ Sans pub</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("🌱 Acheter Starter", key="buy_starter"):
-                session_stripe = creer_session_paiement(email, "starter")
-                if session_stripe:
-                    st.markdown(f"""<a href="{session_stripe.url}" target="_blank"
-                       style="display:block; text-align:center;
-                              background:linear-gradient(135deg,#D4AF37,#C1440E);
-                              color:white; padding:10px; border-radius:8px;
-                              font-weight:600; text-decoration:none; margin-top:8px;">
-                        💳 Payer maintenant →</a>""", unsafe_allow_html=True)
+        packs = [
+            ("🌱", "Starter", "9,99 €", "starter", "#52B788", "100 crédits", "100 recherches", "Sans pub"),
+            ("⭐", "Pro", "39,99 €", "pro", "#D4AF37", "500 crédits", "500 recherches", "Sans pub + alertes"),
+            ("🚀", "Business", "99,99 €", "business", "#C1440E", "2000 crédits", "2000 recherches", "Sans pub + export Excel"),
+        ]
+        for col, (icon, nom, prix, pack_id, couleur, c1, c2, c3) in zip([col_p1, col_p2, col_p3], packs):
+            with col:
+                st.markdown(f"""
+                <div class="kpi-card" style="border-top:4px solid {couleur};">
+                    <div style="font-size:1.5rem;">{icon}</div>
+                    <div class="kpi-value" style="color:{couleur};">{prix}</div>
+                    <div style="color:#D4AF37;font-weight:600;margin:8px 0;">Pack {nom}</div>
+                    <div style="color:rgba(250,247,242,0.7);font-size:0.85rem;line-height:2;">
+                        💎 {c1}<br>🔍 {c2}<br>✅ {c3}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(f"{icon} Acheter {nom}", key=f"buy_{pack_id}"):
+                    session_stripe = creer_session_paiement(user_email, pack_id)
+                    if session_stripe:
+                        st.markdown(f"""<a href="{session_stripe.url}" target="_blank"
+                            style="display:block;text-align:center;background:linear-gradient(135deg,#D4AF37,#C1440E);
+                            color:white;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:8px;">
+                            💳 Payer maintenant →</a>""", unsafe_allow_html=True)
 
-        with col_p2:
-            st.markdown("""
-            <div class="kpi-card" style="border-top:4px solid #D4AF37;">
-                <div style="font-size:1.5rem;">⭐</div>
-                <div class="kpi-value">39,99 €</div>
-                <div style="color:#D4AF37; font-weight:600; margin:8px 0;">Pack Pro</div>
-                <div style="color:rgba(250,247,242,0.7); font-size:0.85rem; line-height:2;">
-                    💎 500 crédits<br>🔍 500 recherches<br>✅ Sans pub<br>🔔 Alertes email</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("⭐ Acheter Pro", key="buy_pro"):
-                session_stripe = creer_session_paiement(email, "pro")
-                if session_stripe:
-                    st.markdown(f"""<a href="{session_stripe.url}" target="_blank"
-                       style="display:block; text-align:center;
-                              background:linear-gradient(135deg,#D4AF37,#C1440E);
-                              color:white; padding:10px; border-radius:8px;
-                              font-weight:600; text-decoration:none; margin-top:8px;">
-                        💳 Payer maintenant →</a>""", unsafe_allow_html=True)
+# ══════════════════════════════════════════════
+# FOOTER DÉFILANT
+# ══════════════════════════════════════════════
+pubs_footer = PUBS * 3  # Tripler pour l'effet continu
+items_html = ""
+for pub in pubs_footer:
+    items_html += f"""
+    <span class="marquee-item">
+        <span>{pub['titre']}</span>
+        <span style="color:rgba(250,247,242,0.5);">—</span>
+        <span>{pub['desc'][:40]}</span>
+        <a href="{pub['url']}" target="_blank">{pub['cta']}</a>
+    </span>
+    """
 
-        with col_p3:
-            st.markdown("""
-            <div class="kpi-card" style="border-top:4px solid #C1440E;">
-                <div style="font-size:1.5rem;">🚀</div>
-                <div class="kpi-value" style="color:#C1440E;">99,99 €</div>
-                <div style="color:#D4AF37; font-weight:600; margin:8px 0;">Pack Business</div>
-                <div style="color:rgba(250,247,242,0.7); font-size:0.85rem; line-height:2;">
-                    💎 2000 crédits<br>🔍 2000 recherches<br>✅ Sans pub<br>🔔 Alertes email<br>📊 Export Excel</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("🚀 Acheter Business", key="buy_business"):
-                session_stripe = creer_session_paiement(email, "business")
-                if session_stripe:
-                    st.markdown(f"""<a href="{session_stripe.url}" target="_blank"
-                       style="display:block; text-align:center;
-                              background:linear-gradient(135deg,#D4AF37,#C1440E);
-                              color:white; padding:10px; border-radius:8px;
-                              font-weight:600; text-decoration:none; margin-top:8px;">
-                        💳 Payer maintenant →</a>""", unsafe_allow_html=True)
-
-# ── Bannière bas
-if not est_payant:
-    pub_b = random.choice(PUBS)
-    st.markdown(f"""
-    <div class="banniere-bas">
-        <div style="font-size:0.65rem; color:rgba(212,175,55,0.5);
-             text-transform:uppercase; letter-spacing:1px; white-space:nowrap;">Pub</div>
-        <div style="color:#FAF7F2; font-size:0.85rem; flex:1; text-align:center; padding:0 12px;">
-            {pub_b['texte_banniere']}</div>
-        <a href="{pub_b['url']}" target="_blank"
-           style="background:linear-gradient(135deg,#D4AF37,#C1440E);
-                  color:white; padding:6px 16px; border-radius:6px;
-                  font-weight:600; text-decoration:none; font-size:0.8rem; white-space:nowrap;">
-            {pub_b['cta_court']}</a>
+st.markdown(f"""
+<div class="footer-marquee">
+    <div class="marquee-track">
+        {items_html}
+        {items_html}
     </div>
-    <div style="height:55px;"></div>
-    """, unsafe_allow_html=True)
-
-# ── Footer
-st.markdown("""
-<div style="text-align:center; padding:30px 0 10px 0; color:#D4AF37; opacity:0.5; font-size:0.85rem;">
-    ✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦<br>
-    Immo Maroc © 2026 — Veille intelligente du marché immobilier marocain<br>
-    ✦ ◆ ✦ ◆ ✦ ◆ ✦ ◆ ✦
 </div>
+<div style="height:44px;"></div>
 """, unsafe_allow_html=True)

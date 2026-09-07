@@ -126,7 +126,17 @@ def enregistrer_recherche(email=None, session_id=None, ville=None, budget_max=No
     """, (email, session_id, ville, budget_max, surface_min, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     conn.commit()
     conn.close()
-
+def changer_mot_de_passe(email, nouveau_password):
+    """Change le mot de passe d'un utilisateur"""
+    conn, db_type = get_db_connection()
+    cursor = conn.cursor()
+    ph = get_placeholder(db_type)
+    cursor.execute(f"""
+        UPDATE utilisateurs SET password_hash = {ph} WHERE email = {ph}
+    """, (hash_password(nouveau_password), email))
+    conn.commit()
+    conn.close()
+    return True
 
 if __name__ == "__main__":
     init_auth_db()
