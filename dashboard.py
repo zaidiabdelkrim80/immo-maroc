@@ -53,7 +53,7 @@ PUBS = [
      "url": "https://www.yakeey.com", "cta": "Découvrir →"},
     {"titre": "🏡 Sarouty.ma", "desc": "Achat, vente, location au Maroc",
      "url": "https://www.sarouty.ma", "cta": "Explorer →"},
-    {"titre": "💰 Crédit Immobilier", "desc": "Simulez votre prêt immobilier",
+    {"titre": "💰 CIH Bank", "desc": "Simulez votre crédit immobilier",
      "url": "https://www.cih.co.ma", "cta": "Simuler →"},
 ]
 
@@ -67,23 +67,16 @@ html, body, [class*="css"], .stApp, .main, .block-container {
     color: #FAF7F2 !important;
 }
 
-/* ── Header professionnel */
+/* ── Header */
 .pro-header {
     background: linear-gradient(135deg, #0a1f17 0%, #1B4332 60%, #0d2b1e 100%);
-    padding: 0;
-    border-bottom: 2px solid rgba(212, 175, 55, 0.4);
+    border-bottom: 2px solid rgba(212,175,55,0.4);
+    border-radius: 12px;
     margin-bottom: 20px;
-    position: sticky;
-    top: 0;
-    z-index: 999;
-}
-.header-inner {
+    padding: 14px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 24px;
-    max-width: 1400px;
-    margin: 0 auto;
 }
 .header-logo {
     font-family: 'Playfair Display', serif;
@@ -95,56 +88,14 @@ html, body, [class*="css"], .stApp, .main, .block-container {
     gap: 10px;
 }
 .header-logo span { color: #D4AF37; }
-.header-search {
+.header-subtitle {
+    color: rgba(250,247,242,0.5);
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
     flex: 1;
-    max-width: 400px;
-    margin: 0 24px;
-}
-.header-search input {
-    width: 100%;
-    padding: 8px 16px;
-    border-radius: 20px;
-    border: 1px solid rgba(212,175,55,0.4);
-    background: rgba(255,255,255,0.08);
-    color: #FAF7F2;
-    font-size: 0.9rem;
-}
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.btn-login {
-    background: transparent;
-    border: 1px solid #D4AF37;
-    color: #D4AF37 !important;
-    padding: 7px 18px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.2s;
-}
-.btn-login:hover { background: rgba(212,175,55,0.15); }
-.btn-register {
-    background: linear-gradient(135deg, #D4AF37, #C1440E);
-    border: none;
-    color: white !important;
-    padding: 7px 18px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: pointer;
-    text-decoration: none;
-}
-.credits-pill {
-    background: linear-gradient(135deg, #D4AF37, #C1440E);
-    color: white !important;
-    padding: 5px 14px;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.85rem;
+    padding: 0 20px;
 }
 .user-pill {
     background: rgba(82,183,136,0.2);
@@ -154,64 +105,13 @@ html, body, [class*="css"], .stApp, .main, .block-container {
     border-radius: 20px;
     font-size: 0.85rem;
 }
-
-/* ── Modal auth */
-.modal-bg {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(6px);
-}
-.modal-box {
-    background: linear-gradient(135deg, #0a1f17, #1B4332);
-    border: 1px solid rgba(212,175,55,0.4);
-    border-radius: 20px;
-    padding: 40px;
-    width: 100%;
-    max-width: 440px;
-    box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-    animation: slideUp 0.3s ease;
-}
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.modal-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.6rem;
-    color: #D4AF37;
-    text-align: center;
-    margin-bottom: 24px;
-}
-.modal-tab {
-    display: flex;
-    background: rgba(255,255,255,0.06);
-    border-radius: 10px;
-    padding: 4px;
-    margin-bottom: 24px;
-    gap: 4px;
-}
-.modal-tab-btn {
-    flex: 1;
-    padding: 8px;
-    border-radius: 8px;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-}
-.modal-tab-btn.active {
+.credits-pill {
     background: linear-gradient(135deg, #D4AF37, #C1440E);
-    color: white;
-}
-.modal-tab-btn.inactive {
-    background: transparent;
-    color: rgba(250,247,242,0.6);
+    color: white !important;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
 }
 
 /* ── KPI Cards */
@@ -224,19 +124,8 @@ html, body, [class*="css"], .stApp, .main, .block-container {
     border-top: 4px solid #D4AF37;
     margin-bottom: 10px;
 }
-.kpi-value {
-    font-family: 'Playfair Display', serif;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #D4AF37;
-}
-.kpi-label {
-    font-size: 0.82rem;
-    color: rgba(250,247,242,0.7);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 4px;
-}
+.kpi-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: #D4AF37; }
+.kpi-label { font-size: 0.82rem; color: rgba(250,247,242,0.7); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
 
 /* ── Sidebar */
 section[data-testid="stSidebar"] {
@@ -246,9 +135,7 @@ section[data-testid="stSidebar"] {
 section[data-testid="stSidebar"] label,
 section[data-testid="stSidebar"] p,
 section[data-testid="stSidebar"] span,
-section[data-testid="stSidebar"] div {
-    color: #FAF7F2 !important;
-}
+section[data-testid="stSidebar"] div { color: #FAF7F2 !important; }
 section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
     background-color: #0a1f17 !important;
     border: 1px solid rgba(212,175,55,0.4) !important;
@@ -260,7 +147,7 @@ section[data-testid="stSidebar"] div[data-baseweb="select"] * {
     -webkit-text-fill-color: #FAF7F2 !important;
 }
 section[data-testid="stSidebar"] div[data-baseweb="select"] svg { fill: #D4AF37 !important; }
-section[data-testid="stSidebar"] input[type="number"] {
+section[data-testid="stSidebar"] input {
     background-color: #0a1f17 !important;
     color: #FAF7F2 !important;
     -webkit-text-fill-color: #FAF7F2 !important;
@@ -278,8 +165,7 @@ section[data-testid="stSidebar"] .stNumberInput button {
     border: none !important;
 }
 div[data-baseweb="popover"], div[data-baseweb="popover"] * {
-    background-color: #0a1f17 !important;
-    color: #FAF7F2 !important;
+    background-color: #0a1f17 !important; color: #FAF7F2 !important;
 }
 div[data-baseweb="menu"] {
     background-color: #0a1f17 !important;
@@ -292,22 +178,16 @@ div[aria-selected="true"] { background-color: rgba(212,175,55,0.2) !important; c
 
 /* ── Tabs */
 .stTabs [data-baseweb="tab-list"] {
-    background: rgba(255,255,255,0.06);
-    border-radius: 10px;
-    padding: 4px;
+    background: rgba(255,255,255,0.06); border-radius: 10px; padding: 4px;
     border: 1px solid rgba(212,175,55,0.2);
 }
 .stTabs [data-baseweb="tab"] { color: rgba(250,247,242,0.7) !important; border-radius: 8px; padding: 8px 20px; }
 .stTabs [aria-selected="true"] { background: linear-gradient(135deg, #D4AF37, #C1440E) !important; color: white !important; }
 
-/* ── Annonce cards */
+/* ── Cards */
 .annonce-card {
-    background: rgba(255,255,255,0.06);
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin: 8px 0;
-    border: 1px solid rgba(212,175,55,0.2);
-    border-left: 4px solid #D4AF37;
+    background: rgba(255,255,255,0.06); border-radius: 12px; padding: 16px 20px;
+    margin: 8px 0; border: 1px solid rgba(212,175,55,0.2); border-left: 4px solid #D4AF37;
     transition: transform 0.2s, background 0.2s;
 }
 .annonce-card:hover { transform: translateX(4px); background: rgba(255,255,255,0.1); }
@@ -317,8 +197,6 @@ div[aria-selected="true"] { background-color: rgba(212,175,55,0.2) !important; c
 .badge-surface { background: rgba(99,179,237,0.15); color: #90CDF4; border: 1px solid rgba(99,179,237,0.4); }
 .badge-ville { background: rgba(154,230,180,0.15); color: #9AE6B4; border: 1px solid rgba(154,230,180,0.4); }
 .badge-source { background: rgba(252,129,74,0.15); color: #FC814A; border: 1px solid rgba(252,129,74,0.4); }
-
-/* ── Autres */
 .alerte-card { background: rgba(212,175,55,0.08); border-radius: 10px; padding: 14px 18px; margin: 8px 0; border: 1px solid rgba(212,175,55,0.3); border-left: 4px solid #D4AF37; }
 .section-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: #D4AF37; border-bottom: 1px solid rgba(212,175,55,0.3); padding-bottom: 8px; margin-bottom: 16px; }
 .separateur { text-align: center; color: #D4AF37; font-size: 1.2rem; letter-spacing: 12px; margin: 20px 0; opacity: 0.5; }
@@ -330,21 +208,13 @@ div[aria-selected="true"] { background-color: rgba(212,175,55,0.2) !important; c
 
 /* ── Footer défilant */
 .footer-marquee {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
     background: linear-gradient(90deg, #0a1f17 0%, #112b21 50%, #0a1f17 100%);
     border-top: 1px solid rgba(212,175,55,0.4);
-    padding: 0;
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    z-index: 1000;
-    overflow: hidden;
-    height: 44px;
-    display: flex;
-    align-items: center;
+    height: 44px; overflow: hidden; display: flex; align-items: center;
 }
 .marquee-track {
-    display: flex;
-    animation: marquee 30s linear infinite;
-    white-space: nowrap;
+    display: flex; animation: marquee 35s linear infinite; white-space: nowrap;
 }
 .marquee-track:hover { animation-play-state: paused; }
 @keyframes marquee {
@@ -352,69 +222,41 @@ div[aria-selected="true"] { background-color: rgba(212,175,55,0.2) !important; c
     100% { transform: translateX(-50%); }
 }
 .marquee-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0 32px;
-    color: rgba(250,247,242,0.8);
-    font-size: 0.82rem;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 32px; color: rgba(250,247,242,0.7); font-size: 0.82rem;
     border-right: 1px solid rgba(212,175,55,0.2);
 }
 .marquee-item a { color: #D4AF37 !important; text-decoration: none; font-weight: 600; }
-.marquee-sep { color: rgba(212,175,55,0.4); padding: 0 8px; }
-
-/* ── Inputs auth */
-section[data-testid="stSidebar"] input[type="text"],
-section[data-testid="stSidebar"] input[type="email"],
-section[data-testid="stSidebar"] input[type="password"] {
-    background-color: #0a1f17 !important;
-    color: #FAF7F2 !important;
-    -webkit-text-fill-color: #FAF7F2 !important;
-    border: 1px solid rgba(212,175,55,0.4) !important;
-    border-radius: 8px !important;
-}
+.marquee-dot { color: rgba(212,175,55,0.4); }
 
 p, span, label, h1, h2, h3 { color: #FAF7F2 !important; }
 </style>
 """
 
 
-# ══════════════════════════════════════════════
-# FONCTIONS DB
-# ══════════════════════════════════════════════
-
-def get_annonces(ville=None, prix_min=None, prix_max=None, surface_min=None, surface_max=None, source=None, recherche=None):
+def get_annonces(ville=None, prix_min=None, prix_max=None, surface_min=None, surface_max=None, source=None):
     try:
         conn, db_type = get_db_connection()
         ph = get_placeholder(db_type)
         query = "SELECT * FROM annonces WHERE 1=1"
         params = []
         if ville and ville != "Toutes":
-            query += f" AND ville = {ph}"
-            params.append(ville)
+            query += f" AND ville = {ph}"; params.append(ville)
         if prix_min:
-            query += f" AND prix_dh >= {ph}"
-            params.append(prix_min)
+            query += f" AND prix_dh >= {ph}"; params.append(prix_min)
         if prix_max:
-            query += f" AND prix_dh <= {ph}"
-            params.append(prix_max)
+            query += f" AND prix_dh <= {ph}"; params.append(prix_max)
         if surface_min:
-            query += f" AND surface_m2 >= {ph}"
-            params.append(surface_min)
+            query += f" AND surface_m2 >= {ph}"; params.append(surface_min)
         if surface_max:
-            query += f" AND surface_m2 <= {ph}"
-            params.append(surface_max)
+            query += f" AND surface_m2 <= {ph}"; params.append(surface_max)
         if source and source != "Toutes":
-            query += f" AND source = {ph}"
-            params.append(source)
-        if recherche:
-            query += f" AND titre ILIKE {ph}" if db_type == "postgresql" else f" AND titre LIKE {ph}"
-            params.append(f"%{recherche}%")
+            query += f" AND source = {ph}"; params.append(source)
         query += " ORDER BY prix_dh ASC NULLS LAST" if db_type == "postgresql" else " ORDER BY prix_dh ASC"
         df = pd.read_sql_query(query, conn, params=params)
         conn.close()
         return df
-    except Exception as e:
+    except:
         return pd.DataFrame()
 
 
@@ -464,15 +306,10 @@ def get_alertes(budget_max, surface_min, ville=None):
     try:
         conn, db_type = get_db_connection()
         ph = get_placeholder(db_type)
-        query = f"""
-            SELECT titre, prix_dh, surface_m2, prix_m2, ville, url, source
-            FROM annonces WHERE prix_dh <= {ph} AND prix_dh IS NOT NULL
-            AND surface_m2 >= {ph} AND surface_m2 IS NOT NULL
-        """
+        query = f"SELECT titre, prix_dh, surface_m2, prix_m2, ville, url, source FROM annonces WHERE prix_dh <= {ph} AND prix_dh IS NOT NULL AND surface_m2 >= {ph} AND surface_m2 IS NOT NULL"
         params = [budget_max, surface_min]
         if ville and ville != "Toutes":
-            query += f" AND ville = {ph}"
-            params.append(ville)
+            query += f" AND ville = {ph}"; params.append(ville)
         query += " ORDER BY prix_dh ASC LIMIT 10"
         df = pd.read_sql_query(query, conn, params=params)
         conn.close()
@@ -494,7 +331,7 @@ st.set_page_config(
 )
 st.markdown(CSS, unsafe_allow_html=True)
 
-# ── Gestion reset password via URL
+# ── Gestion URL params
 query_params = st.query_params
 action = query_params.get("action", "")
 reset_token = query_params.get("token", "")
@@ -504,7 +341,6 @@ if action == "reset" and reset_token:
     st.session_state["reset_token"] = reset_token
     st.query_params.clear()
 
-# ── Retour paiement Stripe
 paiement_status = query_params.get("paiement", "")
 email_paye = query_params.get("email", "")
 pack_paye = query_params.get("pack", "")
@@ -520,9 +356,9 @@ if paiement_status == "succes" and email_paye and pack_paye:
         st.session_state["paiement_succes"] = {"pack": pack_paye, "credits": credits_a_ajouter}
     st.query_params.clear()
 
-est_payant = False
-if st.session_state.get("user_email"):
-    est_payant = get_credits(st.session_state["user_email"]) > 50
+user_email = st.session_state.get("user_email")
+credits_user = get_credits(user_email) if user_email else 0
+est_payant = credits_user > 50
 
 # ══════════════════════════════════════════════
 # MODE RESET PASSWORD
@@ -531,81 +367,83 @@ if st.session_state.get("reset_mode"):
     token = st.session_state.get("reset_token", "")
     email_reset, msg_token = verifier_token_reset(token)
 
-    st.markdown("""
-    <div style="max-width:440px; margin:60px auto;">
-    """, unsafe_allow_html=True)
-
-    if email_reset:
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,#0a1f17,#1B4332);
-             border:1px solid rgba(212,175,55,0.4); border-radius:20px; padding:40px; text-align:center;">
-            <h2 style="color:#D4AF37; font-family:'Playfair Display',serif;">🔑 Nouveau mot de passe</h2>
-            <p style="color:rgba(250,247,242,0.7);">Pour le compte : <b style="color:#D4AF37;">{email_reset}</b></p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        nouveau_mdp = st.text_input("Nouveau mot de passe", type="password", key="new_pwd")
-        confirm_mdp = st.text_input("Confirmer le mot de passe", type="password", key="confirm_pwd")
-
-        if st.button("✅ Changer le mot de passe"):
-            if len(nouveau_mdp) < 6:
-                st.error("❌ Mot de passe trop court (minimum 6 caractères)")
-            elif nouveau_mdp != confirm_mdp:
-                st.error("❌ Les mots de passe ne correspondent pas")
-            else:
-                changer_mot_de_passe(email_reset, nouveau_mdp)
-                consommer_token_reset(token)
-                st.success("✅ Mot de passe changé ! Vous pouvez vous connecter.")
+    col_c, col_f, col_c2 = st.columns([1, 2, 1])
+    with col_f:
+        if email_reset:
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#0a1f17,#1B4332);
+                 border:1px solid rgba(212,175,55,0.4); border-radius:20px; padding:40px; text-align:center; margin-top:40px;">
+                <h2 style="color:#D4AF37; font-family:'Playfair Display',serif;">🔑 Nouveau mot de passe</h2>
+                <p style="color:rgba(250,247,242,0.7);">Compte : <b style="color:#D4AF37;">{email_reset}</b></p>
+            </div>
+            """, unsafe_allow_html=True)
+            nouveau_mdp = st.text_input("Nouveau mot de passe", type="password")
+            confirm_mdp = st.text_input("Confirmer", type="password")
+            if st.button("✅ Changer le mot de passe"):
+                if len(nouveau_mdp) < 6:
+                    st.error("❌ Minimum 6 caractères")
+                elif nouveau_mdp != confirm_mdp:
+                    st.error("❌ Mots de passe différents")
+                else:
+                    changer_mot_de_passe(email_reset, nouveau_mdp)
+                    consommer_token_reset(token)
+                    st.success("✅ Mot de passe changé !")
+                    st.session_state.pop("reset_mode", None)
+                    st.session_state.pop("reset_token", None)
+                    st.rerun()
+        else:
+            st.error(msg_token)
+            if st.button("Retour"):
                 st.session_state.pop("reset_mode", None)
-                st.session_state.pop("reset_token", None)
                 st.rerun()
-    else:
-        st.error(msg_token)
-        if st.button("Retour à l'accueil"):
-            st.session_state.pop("reset_mode", None)
-            st.rerun()
-
     st.stop()
 
 # ══════════════════════════════════════════════
-# HEADER PROFESSIONNEL
+# HEADER
 # ══════════════════════════════════════════════
-user_email = st.session_state.get("user_email")
-credits_user = get_credits(user_email) if user_email else 0
+col_logo, col_titre, col_auth = st.columns([2, 4, 3])
 
-if user_email:
-    header_right = f"""
-    <div class="header-actions">
-        <span class="user-pill">✅ {user_email.split('@')[0]}</span>
-        <span class="credits-pill">💎 {credits_user} crédits</span>
-    </div>
-    """
-else:
-    header_right = """
-    <div class="header-actions">
-        <a href="#" class="btn-login" onclick="window.parent.document.querySelector('[data-testid=stSidebar]').style.display='block'">
-            Se connecter
-        </a>
-        <a href="#" class="btn-register">S'inscrire</a>
-    </div>
-    """
-
-st.markdown(f"""
-<div class="pro-header">
-    <div class="header-inner">
+with col_logo:
+    st.markdown("""
+    <div class="pro-header" style="border-radius:10px; padding:10px 16px;">
         <div class="header-logo">
-            <img src="https://flagcdn.com/w32/ma.png" style="height:28px; border-radius:3px;">
+            <img src="https://flagcdn.com/w32/ma.png" style="height:26px; border-radius:3px;">
             Immo<span>Maroc</span>
         </div>
-        <div style="flex:1; max-width:380px; margin:0 20px;">
-            <div style="color:rgba(250,247,242,0.5); font-size:0.8rem; text-align:center; letter-spacing:1px;">
-                VEILLE INTELLIGENTE DU MARCHÉ IMMOBILIER MAROCAIN
-            </div>
-        </div>
-        {header_right}
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+with col_titre:
+    st.markdown("""
+    <div style="text-align:center; padding:16px 0; color:rgba(250,247,242,0.5);
+         font-size:0.72rem; letter-spacing:2px; text-transform:uppercase;
+         border-bottom:1px solid rgba(212,175,55,0.2);">
+        ✦ Veille intelligente du marché immobilier marocain ✦
+    </div>
+    """, unsafe_allow_html=True)
+
+with col_auth:
+    if user_email:
+        st.markdown(f"""
+        <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:8px 0;">
+            <span class="user-pill">✅ {user_email.split('@')[0]}</span>
+            <span class="credits-pill">💎 {credits_user}</span>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("🚪 Déco", key="deco_header"):
+            st.session_state.pop("user_email", None)
+            st.session_state.pop("resultats_recherche", None)
+            st.rerun()
+    else:
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            if st.button("🔐 Connexion", key="btn_login_h"):
+                st.session_state["show_auth"] = "connexion"
+                st.rerun()
+        with col_b2:
+            if st.button("✨ S'inscrire", key="btn_reg_h"):
+                st.session_state["show_auth"] = "inscription"
+                st.rerun()
 
 # ── Notification paiement
 if st.session_state.get("paiement_succes"):
@@ -613,14 +451,103 @@ if st.session_state.get("paiement_succes"):
     st.markdown(f"""
     <div class="succes-paiement">
         <div style="font-size:2rem;">🎉</div>
-        <div style="font-family:'Playfair Display',serif; font-size:1.3rem; color:#52B788; margin:8px 0;">Paiement confirmé !</div>
-        <div style="color:#FAF7F2;">Pack <b style="color:#D4AF37;">{info['pack'].capitalize()}</b> — <b style="color:#D4AF37;">+{info['credits']} crédits</b></div>
+        <div style="font-family:'Playfair Display',serif; font-size:1.3rem; color:#52B788;">Paiement confirmé !</div>
+        <div>Pack <b style="color:#D4AF37;">{info['pack'].capitalize()}</b> — <b style="color:#D4AF37;">+{info['credits']} crédits</b></div>
     </div>
     """, unsafe_allow_html=True)
     st.session_state.pop("paiement_succes", None)
 
 # ══════════════════════════════════════════════
-# SIDEBAR — FILTRES UNIQUEMENT
+# MODAL AUTH (si bouton header cliqué)
+# ══════════════════════════════════════════════
+if st.session_state.get("show_auth") and not user_email:
+    mode_auth = st.session_state["show_auth"]
+
+    col_m1, col_m2, col_m3 = st.columns([1, 2, 1])
+    with col_m2:
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#0a1f17,#1B4332);
+             border:1px solid rgba(212,175,55,0.4); border-radius:16px; padding:30px; margin-bottom:20px;">
+            <h3 style="color:#D4AF37; font-family:'Playfair Display',serif; text-align:center; margin-top:0;">
+                {'🔐 Connexion' if mode_auth == 'connexion' else '✨ Inscription' if mode_auth == 'inscription' else '🔑 Mot de passe oublié'}
+            </h3>
+        </div>
+        """, unsafe_allow_html=True)
+
+        tab_c, tab_i, tab_r = st.columns(3)
+        with tab_c:
+            if st.button("Connexion", key="tab_co", type="primary" if mode_auth == "connexion" else "secondary"):
+                st.session_state["show_auth"] = "connexion"; st.rerun()
+        with tab_i:
+            if st.button("Inscription", key="tab_in", type="primary" if mode_auth == "inscription" else "secondary"):
+                st.session_state["show_auth"] = "inscription"; st.rerun()
+        with tab_r:
+            if st.button("Mot de passe oublié", key="tab_rp", type="primary" if mode_auth == "reset" else "secondary"):
+                st.session_state["show_auth"] = "reset"; st.rerun()
+
+        if mode_auth == "connexion":
+            email_in = st.text_input("📧 Email", key="m_login_email")
+            pwd_in = st.text_input("🔒 Mot de passe", type="password", key="m_login_pwd")
+            col_btn, col_close = st.columns([3, 1])
+            with col_btn:
+                if st.button("Se connecter ✓", key="m_btn_login"):
+                    if email_in and pwd_in:
+                        user = connecter_utilisateur(email_in, pwd_in)
+                        if user:
+                            st.session_state["user_email"] = email_in
+                            st.session_state.pop("show_auth", None)
+                            st.success("✅ Connecté !")
+                            st.rerun()
+                        else:
+                            st.error("❌ Email ou mot de passe incorrect")
+            with col_close:
+                if st.button("✕", key="close_login"):
+                    st.session_state.pop("show_auth", None); st.rerun()
+
+        elif mode_auth == "inscription":
+            nom_in = st.text_input("👤 Nom complet", key="m_nom")
+            email_in = st.text_input("📧 Email", key="m_reg_email")
+            pwd_in = st.text_input("🔒 Mot de passe", type="password", key="m_reg_pwd")
+            pwd2_in = st.text_input("🔒 Confirmer", type="password", key="m_reg_pwd2")
+            col_btn, col_close = st.columns([3, 1])
+            with col_btn:
+                if st.button("Créer mon compte ✓", key="m_btn_reg"):
+                    if not nom_in or not email_in or not pwd_in:
+                        st.error("❌ Remplissez tous les champs")
+                    elif pwd_in != pwd2_in:
+                        st.error("❌ Mots de passe différents")
+                    elif len(pwd_in) < 6:
+                        st.error("❌ Minimum 6 caractères")
+                    else:
+                        ok, msg = inscrire_utilisateur(email_in, pwd_in, nom_in)
+                        if ok:
+                            st.session_state["user_email"] = email_in
+                            st.session_state.pop("show_auth", None)
+                            envoyer_email_bienvenue(email_in, nom_in)
+                            st.success(msg)
+                            st.rerun()
+                        else:
+                            st.error(msg)
+            with col_close:
+                if st.button("✕", key="close_reg"):
+                    st.session_state.pop("show_auth", None); st.rerun()
+
+        else:  # reset
+            email_r = st.text_input("📧 Votre email", key="m_reset_email")
+            col_btn, col_close = st.columns([3, 1])
+            with col_btn:
+                if st.button("📧 Envoyer le lien", key="m_btn_reset"):
+                    if email_r:
+                        ok, msg = envoyer_email_reset(email_r)
+                        st.success(msg) if ok else st.error(msg)
+            with col_close:
+                if st.button("✕", key="close_reset"):
+                    st.session_state.pop("show_auth", None); st.rerun()
+
+    st.markdown("---")
+
+# ══════════════════════════════════════════════
+# SIDEBAR
 # ══════════════════════════════════════════════
 st.sidebar.markdown("""
 <div style="text-align:center; padding:16px 0 10px 0;">
@@ -631,71 +558,59 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Auth dans sidebar
+# Auth compacte sidebar
 if not user_email:
     with st.sidebar.expander("🔐 Connexion / Inscription", expanded=False):
         auth_tab = st.radio("Mode", ["Connexion", "Inscription", "Mot de passe oublié"],
                            label_visibility="collapsed")
-
         if auth_tab == "Connexion":
-            email_in = st.text_input("📧 Email", key="s_login_email")
-            pwd_in = st.text_input("🔒 Mot de passe", type="password", key="s_login_pwd")
-            if st.button("Se connecter", key="btn_login"):
-                if email_in and pwd_in:
-                    user = connecter_utilisateur(email_in, pwd_in)
-                    if user:
-                        st.session_state["user_email"] = email_in
-                        st.success("✅ Connecté !")
-                        st.rerun()
-                    else:
-                        st.error("❌ Email ou mot de passe incorrect")
-
-        elif auth_tab == "Inscription":
-            nom_in = st.text_input("👤 Nom complet", key="s_reg_nom")
-            email_in = st.text_input("📧 Email", key="s_reg_email")
-            pwd_in = st.text_input("🔒 Mot de passe", type="password", key="s_reg_pwd")
-            pwd2_in = st.text_input("🔒 Confirmer", type="password", key="s_reg_pwd2")
-            if st.button("Créer mon compte", key="btn_register"):
-                if not nom_in or not email_in or not pwd_in:
-                    st.error("❌ Remplissez tous les champs")
-                elif pwd_in != pwd2_in:
-                    st.error("❌ Mots de passe différents")
-                elif len(pwd_in) < 6:
-                    st.error("❌ Mot de passe trop court")
+            e = st.text_input("📧 Email", key="sb_email")
+            p = st.text_input("🔒 Mot de passe", type="password", key="sb_pwd")
+            if st.button("Se connecter", key="sb_login"):
+                user = connecter_utilisateur(e, p)
+                if user:
+                    st.session_state["user_email"] = e
+                    st.success("✅")
+                    st.rerun()
                 else:
-                    ok, msg = inscrire_utilisateur(email_in, pwd_in, nom_in)
+                    st.error("❌ Identifiants incorrects")
+        elif auth_tab == "Inscription":
+            n = st.text_input("👤 Nom", key="sb_nom")
+            e = st.text_input("📧 Email", key="sb_reg_email")
+            p = st.text_input("🔒 Mot de passe", type="password", key="sb_reg_pwd")
+            p2 = st.text_input("🔒 Confirmer", type="password", key="sb_reg_pwd2")
+            if st.button("S'inscrire", key="sb_reg"):
+                if p != p2:
+                    st.error("❌ Mots de passe différents")
+                elif len(p) < 6:
+                    st.error("❌ Minimum 6 caractères")
+                else:
+                    ok, msg = inscrire_utilisateur(e, p, n)
                     if ok:
-                        st.session_state["user_email"] = email_in
-                        envoyer_email_bienvenue(email_in, nom_in)
-                        st.success(msg)
+                        st.session_state["user_email"] = e
+                        envoyer_email_bienvenue(e, n)
                         st.rerun()
                     else:
                         st.error(msg)
-
-        else:  # Mot de passe oublié
-            email_reset = st.text_input("📧 Votre email", key="s_reset_email")
-            if st.button("📧 Envoyer le lien", key="btn_reset"):
-                if email_reset:
-                    ok, msg = envoyer_email_reset(email_reset)
-                    if ok:
-                        st.success(msg)
-                    else:
-                        st.error(msg)
+        else:
+            e = st.text_input("📧 Email", key="sb_reset")
+            if st.button("📧 Envoyer", key="sb_send_reset"):
+                ok, msg = envoyer_email_reset(e)
+                st.success(msg) if ok else st.error(msg)
 else:
     st.sidebar.markdown(f"""
-    <div style="text-align:center; padding:10px; background:rgba(82,183,136,0.1);
-         border-radius:10px; border:1px solid rgba(82,183,136,0.3); margin-bottom:12px;">
-        <div style="color:#9AE6B4; font-size:0.85rem;">✅ {user_email}</div>
-        <div class="credits-badge" style="margin-top:6px;">💎 {credits_user} crédits</div>
+    <div style="text-align:center; padding:8px; background:rgba(82,183,136,0.1);
+         border-radius:10px; border:1px solid rgba(82,183,136,0.3); margin-bottom:10px;">
+        <div style="color:#9AE6B4; font-size:0.85rem;">✅ {user_email.split('@')[0]}</div>
+        <div class="credits-badge" style="margin-top:4px;">💎 {credits_user} crédits</div>
     </div>
     """, unsafe_allow_html=True)
-    if st.sidebar.button("🚪 Déconnexion"):
+    if st.sidebar.button("🚪 Déconnexion", key="sb_deco"):
         st.session_state.pop("user_email", None)
         st.session_state.pop("resultats_recherche", None)
         st.rerun()
     st.sidebar.markdown("---")
 
-# Filtres
 st.sidebar.markdown("**🏙️ Ville**")
 villes = get_villes()
 ville_choisie = st.sidebar.selectbox("Ville", villes, label_visibility="collapsed")
@@ -710,20 +625,19 @@ type_choisie = st.sidebar.selectbox("Type", ["Tous", "appartement", "villa", "st
 st.sidebar.markdown("**💰 Budget (DH)**")
 col_s1, col_s2 = st.sidebar.columns(2)
 with col_s1:
-    prix_min = st.number_input("Min", min_value=0, value=0, step=50000, label_visibility="collapsed", key="prix_min")
+    prix_min = st.number_input("Min", min_value=0, value=0, step=50000, label_visibility="collapsed", key="px_min")
 with col_s2:
-    prix_max = st.number_input("Max", min_value=0, value=10000000, step=50000, label_visibility="collapsed", key="prix_max")
+    prix_max = st.number_input("Max", min_value=0, value=10000000, step=50000, label_visibility="collapsed", key="px_max")
 
 st.sidebar.markdown("**📐 Surface (m²)**")
 col_s3, col_s4 = st.sidebar.columns(2)
 with col_s3:
-    surface_min = st.number_input("Min", min_value=0, value=0, step=10, label_visibility="collapsed", key="surf_min")
+    surface_min = st.number_input("Min", min_value=0, value=0, step=10, label_visibility="collapsed", key="sf_min")
 with col_s4:
-    surface_max = st.number_input("Max", min_value=0, value=1000, step=10, label_visibility="collapsed", key="surf_max")
+    surface_max = st.number_input("Max", min_value=0, value=1000, step=10, label_visibility="collapsed", key="sf_max")
 
 st.sidebar.markdown("---")
 
-# Pub sidebar uniquement si pas payant
 if not est_payant:
     pub_s = random.choice(PUBS)
     st.sidebar.markdown(f"""
@@ -731,7 +645,7 @@ if not est_payant:
          border-radius:10px; padding:12px; text-align:center;">
         <div style="font-size:0.6rem; color:rgba(250,247,242,0.35); text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">Publicité</div>
         <b style="color:#D4AF37; font-size:0.85rem;">{pub_s['titre']}</b><br>
-        <span style="font-size:0.75rem; color:rgba(250,247,242,0.6);">{pub_s['desc'][:50]}...</span><br>
+        <span style="font-size:0.75rem; color:rgba(250,247,242,0.6);">{pub_s['desc'][:45]}...</span><br>
         <a href="{pub_s['url']}" target="_blank" style="color:#D4AF37; font-weight:600; text-decoration:none; font-size:0.8rem;">{pub_s['cta']}</a>
     </div>
     """, unsafe_allow_html=True)
@@ -745,7 +659,6 @@ st.sidebar.markdown("""
 # ══════════════════════════════════════════════
 # DONNÉES
 # ══════════════════════════════════════════════
-recherche_rapide = ""
 df = get_annonces(
     ville=ville_choisie,
     prix_min=prix_min if prix_min > 0 else None,
@@ -756,7 +669,6 @@ df = get_annonces(
 )
 total, avec_prix, prix_moyen, prix_m2_moyen = get_stats()
 
-# Session anonyme
 if "session_id" not in st.session_state:
     st.session_state["session_id"] = str(uuid.uuid4())
 
@@ -765,9 +677,9 @@ if "session_id" not in st.session_state:
 # ══════════════════════════════════════════════
 tab1, tab2, tab3, tab4 = st.tabs(["📊 Tableau de bord", "🗺️ Carte interactive", "🔔 Alertes & Recherche", "💳 Recharger"])
 
-# ════════════════
+# ════════════
 # TAB 1
-# ════════════════
+# ════════════
 with tab1:
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -832,12 +744,12 @@ with tab1:
                 st.markdown("""
                 <div class="lock-card">
                     <div style="font-size:2rem;">🔒</div>
-                    <div style="font-family:'Playfair Display',serif; font-size:1.2rem; color:#D4AF37; margin:8px 0;">Inscrivez-vous gratuitement</div>
-                    <div style="color:rgba(250,247,242,0.7); font-size:0.9rem;">Créez un compte pour voir toutes les annonces + 5 crédits offerts !</div>
+                    <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:#D4AF37;margin:8px 0;">Inscrivez-vous gratuitement</div>
+                    <div style="color:rgba(250,247,242,0.7);font-size:0.9rem;">5 crédits offerts à l'inscription !</div>
                 </div>
                 """, unsafe_allow_html=True)
                 break
-            prix_str = f"{int(row['prix_dh']):,} DH" if pd.notna(row['prix_dh']) else "Prix non spécifié"
+            prix_str = f"{int(row['prix_dh']):,} DH" if pd.notna(row['prix_dh']) else "Prix N/A"
             surface_str = f"{int(row['surface_m2'])} m²" if pd.notna(row['surface_m2']) else "N/A"
             ville_str = row['ville'] if pd.notna(row['ville']) else "N/A"
             source_str = row['source'] if pd.notna(row['source']) else ""
@@ -850,96 +762,88 @@ with tab1:
                 <span class="annonce-badge badge-surface">📐 {surface_str}</span>
                 <span class="annonce-badge badge-ville">🏙️ {ville_str}</span>
                 <span class="annonce-badge badge-source">🌐 {source_str}</span>
-                <a href="{lien}" target="_blank" style="float:right; color:#D4AF37; font-weight:600; text-decoration:none; font-size:0.85rem;">Voir l'annonce →</a>
+                <a href="{lien}" target="_blank" style="float:right;color:#D4AF37;font-weight:600;text-decoration:none;font-size:0.85rem;">Voir →</a>
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("📭 Aucune annonce disponible pour le moment.")
+        st.info("📭 Aucune annonce disponible.")
 
-# ════════════════
+# ════════════
 # TAB 2
-# ════════════════
+# ════════════
 with tab2:
     st.markdown('<div class="section-title">🗺️ Carte des annonces par ville</div>', unsafe_allow_html=True)
     carte = folium.Map(location=[31.7917,-7.0926], zoom_start=6, tiles='CartoDB dark_matter')
     if not df.empty:
-        df_carte = df[df['ville'].notna() & df['prix_dh'].notna()]
-        if not df_carte.empty:
-            stats_v = df_carte.groupby('ville').agg(
-                nb_annonces=('prix_dh','count'), prix_moyen=('prix_dh','mean'), prix_m2_moyen=('prix_m2','mean')
-            ).reset_index()
-            for _, row in stats_v.iterrows():
-                ville = row['ville']
-                if ville in VILLES_COORDS:
-                    coords = VILLES_COORDS[ville]
-                    nb = int(row['nb_annonces'])
-                    pm = int(row['prix_moyen'])
-                    pm2 = int(row['prix_m2_moyen']) if pd.notna(row['prix_m2_moyen']) else 0
+        df_c = df[df['ville'].notna() & df['prix_dh'].notna()]
+        if not df_c.empty:
+            sv = df_c.groupby('ville').agg(nb=('prix_dh','count'), pm=('prix_dh','mean'), pm2=('prix_m2','mean')).reset_index()
+            for _, row in sv.iterrows():
+                v = row['ville']
+                if v in VILLES_COORDS:
+                    nb, pm, pm2 = int(row['nb']), int(row['pm']), int(row['pm2']) if pd.notna(row['pm2']) else 0
                     folium.CircleMarker(
-                        location=coords, radius=max(12,nb*5),
+                        location=VILLES_COORDS[v], radius=max(10,nb*4),
                         color='#D4AF37', fill=True, fill_color='#52B788', fill_opacity=0.7,
-                        popup=folium.Popup(f"""<div style="background:#1B4332;color:#FAF7F2;padding:10px;border-radius:8px;border:1px solid #D4AF37;min-width:180px;">
-                            <h4 style="color:#D4AF37;margin:0 0 6px 0;">🕌 {ville}</h4>
-                            <b>📦</b> {nb} annonces<br><b>💰</b> {pm:,} DH<br><b>📐</b> {pm2:,} DH/m²</div>""", max_width=250),
-                        tooltip=f"🕌 {ville} — {nb} annonces"
+                        popup=folium.Popup(f"""<div style="background:#1B4332;color:#FAF7F2;padding:10px;border-radius:8px;border:1px solid #D4AF37;min-width:170px;">
+                            <h4 style="color:#D4AF37;margin:0 0 6px 0;">🕌 {v}</h4>
+                            📦 {nb} annonces<br>💰 {pm:,} DH<br>📐 {pm2:,} DH/m²</div>""", max_width=220),
+                        tooltip=f"🕌 {v} — {nb} annonces"
                     ).add_to(carte)
     st_folium(carte, width=None, height=520)
     st.caption("💡 Cliquez sur un cercle pour voir les détails.")
 
-# ════════════════
+# ════════════
 # TAB 3
-# ════════════════
+# ════════════
 with tab3:
     st.markdown('<div class="section-title">🔔 Recherche personnalisée</div>', unsafe_allow_html=True)
 
     if user_email:
-        credits_now = get_credits(user_email)
-        st.markdown(f'<div style="margin-bottom:10px;"><span class="credits-badge">💎 {credits_now} crédits disponibles</span></div>', unsafe_allow_html=True)
-        peut_chercher = credits_now > 0
+        cn = get_credits(user_email)
+        st.markdown(f'<div style="margin-bottom:10px;"><span class="credits-badge">💎 {cn} crédits</span></div>', unsafe_allow_html=True)
+        peut_chercher = cn > 0
     else:
         session = get_session_anonyme(st.session_state["session_id"])
         restantes = session[1] if session else 0
-        st.info(f"👤 Visiteur anonyme — {restantes} recherche(s) gratuite(s)")
+        st.info(f"👤 {restantes} recherche(s) gratuite(s) restante(s)")
         peut_chercher = restantes > 0
 
-    col_a1, col_a2, col_a3 = st.columns(3)
-    with col_a1:
-        budget_alerte = st.number_input("💰 Budget max (DH)", min_value=100000, max_value=20000000, value=1000000, step=50000)
-    with col_a2:
-        surface_alerte = st.number_input("📐 Surface min (m²)", min_value=20, max_value=500, value=60, step=10)
-    with col_a3:
-        ville_alerte = st.selectbox("🏙️ Ville", get_villes(), key="ville_alerte")
+    ca1, ca2, ca3 = st.columns(3)
+    with ca1: budget_a = st.number_input("💰 Budget max (DH)", min_value=100000, max_value=20000000, value=1000000, step=50000)
+    with ca2: surface_a = st.number_input("📐 Surface min (m²)", min_value=20, max_value=500, value=60, step=10)
+    with ca3: ville_a = st.selectbox("🏙️ Ville", get_villes(), key="va")
 
     if peut_chercher:
         if st.button("🔍 Lancer la recherche (1 crédit)", type="primary"):
-            credit_ok = utiliser_credit(user_email) if user_email else utiliser_recherche_anonyme(st.session_state["session_id"])
-            if not credit_ok:
+            ok = utiliser_credit(user_email) if user_email else utiliser_recherche_anonyme(st.session_state["session_id"])
+            if not ok:
                 st.error("❌ Plus de crédits !")
             else:
                 enregistrer_recherche(email=user_email, session_id=st.session_state["session_id"],
-                                     ville=ville_alerte, budget_max=budget_alerte, surface_min=surface_alerte)
-                df_res = get_alertes(budget_alerte, surface_alerte, ville_alerte)
-                st.session_state["resultats_recherche"] = df_res.to_dict('records') if not df_res.empty else []
+                                     ville=ville_a, budget_max=budget_a, surface_min=surface_a)
+                df_r = get_alertes(budget_a, surface_a, ville_a)
+                st.session_state["resultats_recherche"] = df_r.to_dict('records') if not df_r.empty else []
                 st.rerun()
     else:
         st.markdown("""<div class="lock-card"><div style="font-size:2rem;">🔒</div>
             <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:#D4AF37;margin:8px 0;">Plus de recherches</div>
-            <div style="color:rgba(250,247,242,0.7);font-size:0.9rem;">Inscrivez-vous ou rechargez vos crédits</div></div>""", unsafe_allow_html=True)
+            <div style="color:rgba(250,247,242,0.7);">Inscrivez-vous ou rechargez</div></div>""", unsafe_allow_html=True)
 
     if "resultats_recherche" in st.session_state:
-        resultats = st.session_state["resultats_recherche"]
-        if resultats:
-            st.success(f"✅ {len(resultats)} annonce(s) trouvée(s) !")
-            for row in resultats:
-                col1, col2 = st.columns([4,1])
-                with col1:
+        res = st.session_state["resultats_recherche"]
+        if res:
+            st.success(f"✅ {len(res)} annonce(s) trouvée(s) !")
+            for row in res:
+                c1, c2 = st.columns([4,1])
+                with c1:
                     st.markdown(f"""<div class="alerte-card">
                         <b style="color:#FAF7F2;">🏠 {row.get('titre','')[:65]}</b><br><br>
                         <span class="annonce-badge badge-prix">💰 {f"{int(row['prix_dh']):,} DH" if row.get('prix_dh') else 'N/A'}</span>
                         <span class="annonce-badge badge-surface">📐 {f"{int(row['surface_m2'])} m²" if row.get('surface_m2') else 'N/A'}</span>
                         <span class="annonce-badge badge-ville">🏙️ {row.get('ville','N/A') or 'N/A'}</span>
                     </div>""", unsafe_allow_html=True)
-                with col2:
+                with c2:
                     if row.get('url'):
                         st.markdown(f"""<a href="{row['url']}" target="_blank"
                             style="display:block;text-align:center;background:linear-gradient(135deg,#D4AF37,#C1440E);
@@ -949,93 +853,79 @@ with tab3:
 
     if user_email:
         st.markdown('<div class="separateur">✦ ◆ ✦ ◆ ✦</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">📺 Gagnez des crédits gratuits</div>', unsafe_allow_html=True)
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
+        st.markdown('<div class="section-title">📺 Gagnez des crédits</div>', unsafe_allow_html=True)
+        cp1, cp2 = st.columns(2)
+        with cp1:
             st.markdown("""<div class="pub-card"><div style="font-size:1.5rem;">📺</div>
-                <b style="color:#D4AF37;">Voir une pub = +1 crédit</b><br>
-                <span style="font-size:0.8rem;color:rgba(250,247,242,0.6);">Soutenez Immo Maroc</span></div>""", unsafe_allow_html=True)
-            if st.button("▶️ Voir la pub (+1 crédit)"):
+                <b style="color:#D4AF37;">Voir une pub = +1 crédit</b></div>""", unsafe_allow_html=True)
+            if st.button("▶️ Voir (+1 crédit)", key="voir_pub"):
                 pub = random.choice(PUBS)
                 st.markdown(f"""<div class="alerte-card" style="text-align:center;">
-                    <b style="color:#D4AF37;">{pub['titre']}</b><br>
-                    <span style="font-size:0.85rem;">{pub['desc']}</span><br>
-                    <a href="{pub['url']}" target="_blank" style="color:#D4AF37;font-weight:600;text-decoration:none;">{pub['cta']}</a>
-                </div>""", unsafe_allow_html=True)
+                    <b style="color:#D4AF37;">{pub['titre']}</b><br>{pub['desc']}<br>
+                    <a href="{pub['url']}" target="_blank" style="color:#D4AF37;font-weight:600;text-decoration:none;">{pub['cta']}</a></div>""", unsafe_allow_html=True)
                 ajouter_credits(user_email, 1)
-                st.success("✅ +1 crédit ajouté !")
+                st.success("✅ +1 crédit !")
                 st.rerun()
-        with col_p2:
+        with cp2:
             st.markdown("""<div class="pub-card"><div style="font-size:1.5rem;">📤</div>
-                <b style="color:#D4AF37;">Partager = +2 crédits</b><br>
-                <span style="font-size:0.8rem;color:rgba(250,247,242,0.6);">Partagez sur WhatsApp</span></div>""", unsafe_allow_html=True)
+                <b style="color:#D4AF37;">Partager = +2 crédits</b></div>""", unsafe_allow_html=True)
             st.markdown("""<a href="https://wa.me/?text=Découvrez Immo Maroc https://maghreb-immo.streamlit.app" target="_blank"
                 style="display:block;text-align:center;background:linear-gradient(135deg,#25D366,#128C7E);
                 color:white;padding:8px;border-radius:8px;font-weight:600;text-decoration:none;margin-bottom:8px;">📤 WhatsApp</a>""", unsafe_allow_html=True)
-            if st.button("✅ J'ai partagé (+2 crédits)"):
+            if st.button("✅ J'ai partagé (+2)", key="partage"):
                 ajouter_credits(user_email, 2)
                 st.success("✅ +2 crédits !")
                 st.rerun()
 
-# ════════════════
+# ════════════
 # TAB 4
-# ════════════════
+# ════════════
 with tab4:
     st.markdown('<div class="section-title">💳 Recharger vos crédits</div>', unsafe_allow_html=True)
-
     if not user_email:
         st.warning("👤 Connectez-vous pour accéder aux packs payants.")
     else:
-        credits_now = get_credits(user_email)
-        st.markdown(f'<div style="margin-bottom:20px;"><span class="credits-badge">💎 Solde : {credits_now} crédits</span></div>', unsafe_allow_html=True)
-
-        col_p1, col_p2, col_p3 = st.columns(3)
+        cn = get_credits(user_email)
+        st.markdown(f'<div style="margin-bottom:20px;"><span class="credits-badge">💎 Solde : {cn} crédits</span></div>', unsafe_allow_html=True)
+        cp1, cp2, cp3 = st.columns(3)
         packs = [
-            ("🌱", "Starter", "9,99 €", "starter", "#52B788", "100 crédits", "100 recherches", "Sans pub"),
-            ("⭐", "Pro", "39,99 €", "pro", "#D4AF37", "500 crédits", "500 recherches", "Sans pub + alertes"),
-            ("🚀", "Business", "99,99 €", "business", "#C1440E", "2000 crédits", "2000 recherches", "Sans pub + export Excel"),
+            ("🌱","Starter","9,99 €","starter","#52B788","100 crédits","100 recherches","Sans pub"),
+            ("⭐","Pro","39,99 €","pro","#D4AF37","500 crédits","500 recherches","Sans pub + alertes"),
+            ("🚀","Business","99,99 €","business","#C1440E","2000 crédits","2000 recherches","Sans pub + export"),
         ]
-        for col, (icon, nom, prix, pack_id, couleur, c1, c2, c3) in zip([col_p1, col_p2, col_p3], packs):
+        for col, (icon,nom,prix,pid,couleur,c1,c2,c3) in zip([cp1,cp2,cp3], packs):
             with col:
-                st.markdown(f"""
-                <div class="kpi-card" style="border-top:4px solid {couleur};">
+                st.markdown(f"""<div class="kpi-card" style="border-top:4px solid {couleur};">
                     <div style="font-size:1.5rem;">{icon}</div>
                     <div class="kpi-value" style="color:{couleur};">{prix}</div>
                     <div style="color:#D4AF37;font-weight:600;margin:8px 0;">Pack {nom}</div>
-                    <div style="color:rgba(250,247,242,0.7);font-size:0.85rem;line-height:2;">
-                        💎 {c1}<br>🔍 {c2}<br>✅ {c3}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button(f"{icon} Acheter {nom}", key=f"buy_{pack_id}"):
-                    session_stripe = creer_session_paiement(user_email, pack_id)
-                    if session_stripe:
-                        st.markdown(f"""<a href="{session_stripe.url}" target="_blank"
+                    <div style="color:rgba(250,247,242,0.7);font-size:0.85rem;line-height:2;">💎 {c1}<br>🔍 {c2}<br>✅ {c3}</div>
+                </div>""", unsafe_allow_html=True)
+                if st.button(f"{icon} {nom}", key=f"buy_{pid}"):
+                    ss = creer_session_paiement(user_email, pid)
+                    if ss:
+                        st.markdown(f"""<a href="{ss.url}" target="_blank"
                             style="display:block;text-align:center;background:linear-gradient(135deg,#D4AF37,#C1440E);
                             color:white;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:8px;">
-                            💳 Payer maintenant →</a>""", unsafe_allow_html=True)
+                            💳 Payer →</a>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # FOOTER DÉFILANT
 # ══════════════════════════════════════════════
-pubs_footer = PUBS * 3  # Tripler pour l'effet continu
-items_html = ""
-for pub in pubs_footer:
-    items_html += f"""
-    <span class="marquee-item">
+pubs_f = PUBS * 4
+items = ""
+for pub in pubs_f:
+    items += f"""<span class="marquee-item">
+        <span style="color:rgba(212,175,55,0.6);">✦</span>
         <span>{pub['titre']}</span>
         <span style="color:rgba(250,247,242,0.5);">—</span>
-        <span>{pub['desc'][:40]}</span>
+        <span>{pub['desc'][:35]}...</span>
         <a href="{pub['url']}" target="_blank">{pub['cta']}</a>
-    </span>
-    """
+    </span>"""
 
 st.markdown(f"""
 <div class="footer-marquee">
-    <div class="marquee-track">
-        {items_html}
-        {items_html}
-    </div>
+    <div class="marquee-track">{items}{items}</div>
 </div>
 <div style="height:44px;"></div>
 """, unsafe_allow_html=True)
